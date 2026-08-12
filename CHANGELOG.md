@@ -73,3 +73,10 @@
 - Added Direct Debit payment method.
 - Added next payment / renewal date.
 - Reworked Expenses dashboard around recurring household costs.
+
+## Expense management update
+
+- Added Edit expense functionality.
+- Added Delete expense functionality with confirmation.
+- Added edit access to recurring-cost records.
+- Expense totals and breakdowns recalculate immediately after changes.

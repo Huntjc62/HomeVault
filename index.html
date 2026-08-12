@@ -403,6 +403,67 @@ function expenseFrequencyLabel(f){
  return ({Monthly:"Monthly",Yearly:"Yearly", "One-off":"One-off"}[f]||f||"One-off");
 }
 
+
+function openEditExpenseForm(id){
+ const e=state.expenses.find(x=>x.id===id);
+ if(!e)return;
+ openModal("Edit expense",`<form onsubmit="updateExpense(event,'${esc(id)}')"><div class="form-grid">
+  <div class="field"><label>Expense</label><input name="title" value="${esc(e.title)}" required></div>
+  <div class="field"><label>Amount (£)</label><input type="number" step="0.01" min="0" name="amount" value="${esc(e.amount)}" required></div>
+  <div class="field"><label>Frequency</label><select name="frequency" onchange="toggleExpenseDateLabel(this.value)">
+   <option value="One-off" ${e.frequency==="One-off"?"selected":""}>One-off</option>
+   <option value="Monthly" ${e.frequency==="Monthly"?"selected":""}>Monthly</option>
+   <option value="Yearly" ${e.frequency==="Yearly"?"selected":""}>Yearly</option>
+  </select></div>
+  <div class="field"><label id="expenseDateLabel">${e.frequency==="One-off"?"Date":e.frequency==="Monthly"?"First payment date":"Renewal / payment date"}</label><input type="date" name="date" value="${esc(e.date)}" required></div>
+  <div class="field"><label>Category</label><select name="category">
+   <option value="Home" ${e.category==="Home"?"selected":""}>Home</option>
+   <option value="Vehicle" ${e.category==="Vehicle"?"selected":""}>Car</option>
+   <option value="Repairs" ${e.category==="Repairs"?"selected":""}>Repairs</option>
+   <option value="Appliances" ${e.category==="Appliances"?"selected":""}>Appliances</option>
+   <option value="Boiler" ${e.category==="Boiler"?"selected":""}>Boiler</option>
+   <option value="Other" ${e.category==="Other"?"selected":""}>Other</option>
+  </select></div>
+  <div class="field"><label>Payment method</label><select name="payment">
+   ${["Direct Debit","Card","Bank transfer","Cash","Finance","Other"].map(x=>`<option ${e.payment===x?"selected":""}>${x}</option>`).join("")}
+  </select></div>
+  <div class="field"><label>Related record</label><input name="related" value="${esc(e.related)}"></div>
+  <div class="field"><label>Next payment / renewal</label><input type="date" name="nextDate" value="${esc(e.nextDate)}"></div>
+  <div class="field full"><label>Notes</label><textarea name="notes">${esc(e.notes)}</textarea></div>
+ </div><div class="actions">
+   <button type="button" class="btn btn-danger" onclick="deleteExpense('${esc(id)}')">Delete expense</button>
+   <span style="flex:1"></span>
+   <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+   <button class="btn btn-primary">Save changes</button>
+ </div></form>`);
+}
+function updateExpense(event,id){
+ event.preventDefault();
+ const index=state.expenses.findIndex(x=>x.id===id);
+ if(index===-1)return;
+ const f=new FormData(event.target);
+ state.expenses[index]={
+   ...state.expenses[index],
+   title:f.get("title"),
+   amount:Number(f.get("amount")||0),
+   frequency:f.get("frequency"),
+   date:f.get("date"),
+   category:f.get("category"),
+   payment:f.get("payment"),
+   related:f.get("related"),
+   nextDate:f.get("nextDate"),
+   notes:f.get("notes")
+ };
+ save();addActivity("Updated expense");closeModal();expensesPage();toast("Expense updated");
+}
+function deleteExpense(id){
+ const expense=state.expenses.find(x=>x.id===id);
+ if(!expense)return;
+ if(!confirm(`Delete "${expense.title}"? This cannot be undone.`))return;
+ state.expenses=state.expenses.filter(x=>x.id!==id);
+ save();addActivity("Deleted expense");closeModal();expensesPage();toast("Expense deleted");
+}
+
 function expensesPage(){
  const year=new Date().getFullYear();
  const total=expenseYearTotal();
@@ -430,10 +491,10 @@ function expensesPage(){
 
  <div class="section"><h2>Monthly & yearly commitments</h2><div class="card">
    ${state.expenses.filter(e=>e.frequency==="Monthly"||e.frequency==="Yearly").length?`
-   <table><thead><tr><th>Cost</th><th>Amount</th><th>Frequency</th><th>Monthly equivalent</th><th>Payment</th><th>Annual cost</th></tr></thead><tbody>
+   <table><thead><tr><th>Cost</th><th>Amount</th><th>Frequency</th><th>Monthly equivalent</th><th>Payment</th><th>Annual cost</th><th>Actions</th></tr></thead><tbody>
    ${state.expenses.filter(e=>e.frequency==="Monthly"||e.frequency==="Yearly").map(e=>{
       const amount=Number(e.amount||0), annual=e.frequency==="Monthly"?amount*12:amount, monthlyEq=annual/12;
-      return `<tr><td><strong>${esc(e.title)}</strong><br><span style="font-size:12px;color:var(--muted)">${expenseCategoryLabel(e.category)}</span></td><td>£${amount.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td><span class="tag">${expenseFrequencyLabel(e.frequency)}</span></td><td>£${monthlyEq.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${esc(e.payment||"—")}</td><td><strong>£${annual.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></td></tr>`;
+      return `<tr><td><strong>${esc(e.title)}</strong><br><span style="font-size:12px;color:var(--muted)">${expenseCategoryLabel(e.category)}</span></td><td>£${amount.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td><span class="tag">${expenseFrequencyLabel(e.frequency)}</span></td><td>£${monthlyEq.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${esc(e.payment||"—")}</td><td><strong>£${annual.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></td><td><button class="btn btn-ghost" style="padding:7px 10px" onclick="openEditExpenseForm('${esc(e.id)}')">Edit</button></td></tr>`;
    }).join("")}
    </tbody></table>`:`<div class="empty"><h3>No recurring costs yet</h3><p>Add your mortgage, rent, insurance, broadband, council tax, subscriptions, servicing or other regular costs.</p></div>`}
  </div></div>
@@ -443,9 +504,9 @@ function expensesPage(){
  </div></div>
 
  <div class="section"><div class="page-head"><div><h2>All expenses</h2><p>One-off expenses and recurring costs.</p></div></div><div class="card">
- ${rows.length?`<table><thead><tr><th>Cost</th><th>Amount</th><th>Frequency</th><th>Category</th><th>Payment</th><th>Start / Date</th></tr></thead><tbody>${rows.map(e=>{
+ ${rows.length?`<table><thead><tr><th>Cost</th><th>Amount</th><th>Frequency</th><th>Category</th><th>Payment</th><th>Start / Date</th><th>Actions</th></tr></thead><tbody>${rows.map(e=>{
    const amount=Number(e.amount||0);
-   return `<tr><td><strong>${esc(e.title)}</strong>${e.related?`<br><span style="font-size:12px;color:var(--muted)">${esc(e.related)}</span>`:""}</td><td>£${amount.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${expenseFrequencyLabel(e.frequency)}</td><td>${expenseCategoryLabel(e.category)}</td><td>${esc(e.payment||"—")}</td><td>${formatDate(e.date)}</td></tr>`;
+   return `<tr><td><strong>${esc(e.title)}</strong>${e.related?`<br><span style="font-size:12px;color:var(--muted)">${esc(e.related)}</span>`:""}</td><td>£${amount.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${expenseFrequencyLabel(e.frequency)}</td><td>${expenseCategoryLabel(e.category)}</td><td>${esc(e.payment||"—")}</td><td>${formatDate(e.date)}</td><td><button class="btn btn-ghost" style="padding:7px 10px" onclick="openEditExpenseForm('${esc(e.id)}')">Edit</button></td></tr>`;
  }).join("")}</tbody></table>`:`<div class="empty"><div style="font-size:45px">💷</div><h3>No expenses recorded</h3><p>Add your first home cost.</p></div>`}
  </div></div>
 
