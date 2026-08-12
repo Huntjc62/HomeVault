@@ -74,7 +74,9 @@ async function syncCollection(name){
  await batch.commit();
 }
 async function save(){
- if(!hvUser)return;
+ if(!hvUser){
+   throw new Error("No signed-in Firebase user.");
+ }
  try{
    await Promise.all(COLLECTIONS.map(syncCollection));
    await hvDb.collection("users").doc(hvUser.uid).set({
@@ -89,6 +91,11 @@ async function addActivity(text){
  state.activity.unshift({id:uid(),text,date:new Date().toISOString()});
  state.activity=state.activity.slice(0,40);
  queueSave();
+}
+async function verifyFirebaseConnection(){
+ if(!hvUser || !hvDb) throw new Error("HomeVault is not connected to Firebase Authentication/Firestore.");
+ await hvDb.collection("users").doc(hvUser.uid).get();
+ return true;
 }
 function showFirebaseError(e){
  const msg=esc(e?.message||"Firebase could not initialise.");
@@ -116,7 +123,12 @@ function setupShell(page,title,subtitle){
 }
 function nav(page){location.href=page+".html"}
 function toggleMenu(){document.getElementById("sidebar").classList.toggle("open")}
-function pageBase(page,title,subtitle,content){document.title="HomeVault — "+title;document.body.innerHTML=`
+function pageBase(page,title,subtitle,content){
+ if(!hvUser){
+   hvReady.then(()=>pageBase(page,title,subtitle,content)).catch(showFirebaseError);
+   return;
+ }
+ document.title="HomeVault — "+title;document.body.innerHTML=`
 <div class="app"><aside class="sidebar" id="sidebar"><div class="brand">Home<span>Vault</span></div><nav class="nav">
 <a data-page="dashboard" href="dashboard.html">🏠 <span>Dashboard</span></a>
 <a data-page="home" href="home.html">🏡 <span>My Home</span></a>

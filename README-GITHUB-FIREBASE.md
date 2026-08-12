@@ -148,3 +148,10 @@ Firebase Console or Firebase CLI. Then sign out and sign back in to HomeVault.
 When saving a home, HomeVault now waits for Firestore to confirm the write before
 closing the form. If Firestore rejects it, the record is rolled back in the page
 and an error is shown in the browser console.
+
+
+## Button/page loading fix
+
+The current package waits for Firebase Authentication to finish restoring the signed-in session before rendering each page. This prevents buttons/forms from being created before `hvUser` exists after a GitHub Pages refresh.
+
+If a page still shows a Firebase error, open browser Developer Tools → Console and check the exact Firebase error. The most common causes are an unpublished Firestore rule update, Authentication Email/Password being disabled, or a stale GitHub Pages deployment.
