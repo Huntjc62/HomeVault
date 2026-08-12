@@ -102,3 +102,10 @@
 - Added automatic monthly equivalent calculations for custom frequencies.
 - Added automatic annual equivalent calculations for custom frequencies.
 - Added recurring frequency editing.
+
+## Stability fix — recurring expenses
+
+- Added migration for older expense records.
+- Added defensive handling for malformed localStorage expense data.
+- Fixed recurring annual/monthly calculations for legacy entries.
+- Added safer page navigation error handling so one bad record cannot blank the entire application.

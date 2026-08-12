@@ -173,8 +173,23 @@ const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {
 };
 function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}
 state.reminderSettings = state.reminderSettings || {days:[30,14,7,1], email:true, browser:true};
-state.expenses = state.expenses || [];
-state.timelineEvents = state.timelineEvents || [];
+if(!Array.isArray(state.homes)) state.homes=[];
+if(!Array.isArray(state.boilers)) state.boilers=[];
+if(!Array.isArray(state.vehicles)) state.vehicles=[];
+if(!Array.isArray(state.appliances)) state.appliances=[];
+if(!Array.isArray(state.documents)) state.documents=[];
+if(!Array.isArray(state.reminders)) state.reminders=[];
+if(!Array.isArray(state.users)) state.users=[{username:"admin", role:"Admin"}];
+if(!Array.isArray(state.activity)) state.activity=[];
+if(!Array.isArray(state.expenses)) state.expenses=[];
+if(!Array.isArray(state.timelineEvents)) state.timelineEvents=[];
+state.expenses = state.expenses.map(e=>({
+ id:e.id||uid(), title:e.title||"Expense", amount:Number(e.amount||0), date:e.date||"",
+ scope:e.scope==="Personal"?"Personal":"Home", frequency:e.frequency||"One-off",
+ interval:Math.max(1,Number(e.interval||1)), intervalUnit:e.intervalUnit||"month",
+ category:e.category||"Other", related:e.related||"", payment:e.payment||"Direct Debit",
+ nextDate:e.nextDate||"", notes:e.notes||"", receipt:e.receipt||""
+}));
 function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
 function esc(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 function uid(){return Date.now()+"_"+Math.random().toString(36).slice(2,7)}
@@ -371,8 +386,11 @@ function recurringMonthlyTotal(scope){
 }
 function currentMonthActualTotal(scope){
  const now=new Date(),year=now.getFullYear(),month=now.getMonth();
- return state.expenses.filter(e=>expenseScope(e)===(scope||expenseScope(e)) && e.frequency==="One-off" && e.date).reduce((sum,e)=>{
+ return state.expenses.reduce((sum,e)=>{
+   if(scope && expenseScope(e)!==scope)return sum;
+   if(e.frequency!=="One-off" || !e.date)return sum;
    const d=new Date(e.date+"T00:00:00");
+   if(Number.isNaN(d.getTime()))return sum;
    return d.getFullYear()===year && d.getMonth()===month ? sum+Number(e.amount||0) : sum;
  },0);
 }
@@ -391,12 +409,9 @@ function combinedMonthlyCost(){
 function expenseBreakdown(){
  const groups={Home:0,Vehicle:0,Repairs:0,Appliances:0,Boiler:0,Other:0};
  state.expenses.forEach(e=>{
-   const amount=Number(e.amount||0);
-   let annual=amount;
-   if(e.frequency==="Monthly") annual=amount*12;
-   if(e.frequency==="Yearly") annual=amount;
+   const annual=e.frequency==="One-off"?Number(e.amount||0):recurringAnnualEquivalent(e);
    const c=e.category||"Other";
-   groups[c]=(groups[c]||0)+annual;
+   groups[c]=(groups[c]||0)+(Number.isFinite(annual)?annual:0);
  });
  return groups;
 }
@@ -412,8 +427,10 @@ function getFrequencyLabel(e){
  return "Recurring";
 }
 function recurringMonthlyEquivalent(e){
- if(e.frequency!=="Recurring") return e.frequency==="Monthly"?Number(e.amount||0):e.frequency==="Yearly"?Number(e.amount||0)/12:0;
- const amount=Number(e.amount||0), n=Math.max(1,Number(e.interval||1)), unit=e.intervalUnit||"month";
+ const amount=Number(e.amount||0);
+ if(!Number.isFinite(amount))return 0;
+ if(e.frequency!=="Recurring") return e.frequency==="Monthly"?amount:e.frequency==="Yearly"?amount/12:e.frequency==="One-off"?0:amount/12;
+ const n=Math.max(1,Number(e.interval||1)), unit=e.intervalUnit||"month";
  if(unit==="day") return amount*(365/12)/n;
  if(unit==="week") return amount*(52/12)/n;
  if(unit==="month") return amount/n;
@@ -814,7 +831,14 @@ function quickAdd(){openModal("Add record",`<div class="grid grid-2"><button cla
 function navigate(page){
  document.querySelectorAll(".nav button[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
  document.getElementById("sidebar").classList.remove("open");
- ({dashboard,home:homePage,boiler:boilerPage,vehicle:vehiclePage,appliances:appliancesPage,documents:documentsPage,scanner:scannerPage,reminders:remindersPage,expenses:expensesPage,timeline:timelinePage,admin:adminPage}[page]||dashboard)();
+ try{
+   ({dashboard,home:homePage,boiler:boilerPage,vehicle:vehiclePage,appliances:appliancesPage,documents:documentsPage,scanner:scannerPage,reminders:remindersPage,expenses:expensesPage,timeline:timelinePage,admin:adminPage}[page]||dashboard)();
+ }catch(error){
+   console.error("HomeVault page error:",error);
+   document.getElementById("pageTitle").textContent="HomeVault";
+   document.getElementById("pageSubtitle").textContent="We couldn't load this section.";
+   document.getElementById("content").innerHTML=`<div class="card"><h2>Something went wrong</h2><p>HomeVault has protected your saved data. Try refreshing the page. If the problem continues, use Admin → Reset demo data.</p><button class="btn btn-primary" style="margin-top:15px" onclick="resetDemo()">Reset demo data</button></div>`;
+ }
 }
 document.querySelectorAll(".nav button[data-page]").forEach(b=>b.addEventListener("click",()=>navigate(b.dataset.page)));
 document.getElementById("mobileMenu").addEventListener("click",()=>document.getElementById("sidebar").classList.toggle("open"));
