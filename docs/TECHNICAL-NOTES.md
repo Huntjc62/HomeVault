@@ -182,3 +182,43 @@ Future analytics can calculate:
 - cost per year
 - total ownership cost
 - replacement cost trends
+
+## Phase 5 — Home Timeline
+
+The timeline is currently generated from existing records rather than requiring duplicate data entry. Manual timeline events are stored in `state.timelineEvents`.
+
+Production should use a normalised event model or database view so the timeline can combine:
+- home events
+- asset events
+- maintenance events
+- purchases
+- expenses
+- documents
+- reminders
+- improvements
+- tenancy events
+
+Each event should reference its source record rather than duplicating display data.
+
+## Expense recurring-cost model
+
+Expenses now support:
+- `One-off`
+- `Monthly`
+- `Yearly`
+
+For production:
+- Monthly recurring costs should contribute 12x to annual projections.
+- Yearly recurring costs should contribute their full amount annually and one-twelfth to the monthly equivalent.
+- One-off expenses should contribute only to the period in which they occur.
+- Payment method supports Direct Debit and should eventually be linked to payment/renewal reminders.
+- `nextDate` should drive future payment reminders for recurring costs.
+
+A production database should also support:
+- start date
+- end date
+- active/inactive status
+- billing day
+- payment provider/account reference where appropriate
+- linked home/asset ID
+- receipt storage ID

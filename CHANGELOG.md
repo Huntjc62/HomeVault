@@ -53,3 +53,23 @@
 - Added receipt upload field.
 - Added dashboard home-cost summary.
 - Added expense quick-add action.
+
+## Phase 5 — Home Timeline
+
+- Added Home Timeline section.
+- Automatically generates timeline events from existing records.
+- Added year-by-year grouping.
+- Added manual timeline events.
+- Added property purchase, tenancy, appliance, boiler, vehicle, expense and document events.
+- Added timeline summary to dashboard.
+
+## Expense system update
+
+- Added One-off / Monthly / Yearly expense frequency.
+- Added recurring monthly cost calculation.
+- Added yearly-to-monthly equivalent calculation.
+- Added estimated annual home cost calculation.
+- Added current-month one-off spend.
+- Added Direct Debit payment method.
+- Added next payment / renewal date.
+- Reworked Expenses dashboard around recurring household costs.

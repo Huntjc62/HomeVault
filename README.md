@@ -91,15 +91,26 @@ This package is intentionally front-end focused. It can be opened locally or dep
 - Manuals
 - Other
 
+### Home Timeline
+- Automatically builds a property history from home, boiler, vehicle, appliance, document and expense records
+- Year-by-year timeline
+- Manual timeline events
+- Purchases, servicing, repairs, renewals and improvements
+- Timeline detail and related-record information
+
 ### Expenses
 - Home cost tracking
 - Vehicle costs
 - Boiler costs
 - Appliance costs
 - Repairs
-- Annual total
+- Estimated annual total
+- Regular monthly cost calculation
+- Current-month one-off spend
+- Monthly and yearly recurring costs
 - Category breakdown
 - Expense history
+- Direct Debit payment method
 - Receipt filename capture
 
 ### Smart reminders
@@ -281,6 +292,16 @@ Track:
 - Free-to-paid conversion once subscriptions exist
 
 ## Roadmap
+
+### Phase 5 — Home Timeline
+- [x] Automatic timeline generation
+- [x] Year-by-year history
+- [x] Manual timeline events
+- [x] Related record and cost information
+- [x] Dashboard timeline summary
+- [ ] Timeline filters
+- [ ] Property milestone view
+- [ ] Export property history
 
 ### Phase 4 — Expenses
 - [x] Expense records

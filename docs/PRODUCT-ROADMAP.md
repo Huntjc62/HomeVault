@@ -124,3 +124,30 @@ Potential future records:
 - [ ] Asset lifetime cost
 - [ ] Replacement forecasting
 - [ ] Export expenses
+
+## Phase 5 — Home Timeline
+
+- [x] Automatic property history
+- [x] Year grouping
+- [x] Manual events
+- [x] Asset-linked events
+- [x] Expense-linked events
+- [ ] Timeline filtering
+- [ ] Search timeline
+- [ ] Property milestone cards
+- [ ] Timeline export
+- [ ] Shareable property history for sale/move
+
+## Expense improvements
+
+- [x] Monthly expenses
+- [x] Yearly expenses
+- [x] One-off expenses
+- [x] Monthly equivalent calculation
+- [x] Annual projection
+- [x] Direct Debit payment method
+- [x] Next payment / renewal date
+- [ ] Monthly spending charts
+- [ ] Payment due notifications
+- [ ] Recurring expense editing
+- [ ] Cancelled recurring costs
