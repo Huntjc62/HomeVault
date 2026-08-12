@@ -105,14 +105,13 @@ This package is intentionally front-end focused. It can be opened locally or dep
 - Appliance costs
 - Repairs
 - Home monthly cost
+- Next month projected costs
 - Personal monthly cost
 - Combined monthly cost
 - Estimated annual total
 - Regular monthly cost calculation
 - Current-month one-off spend
-- Weekly and custom recurring costs
-- Monthly and yearly recurring costs
-- Every X days/weeks/months recurring costs
+- Monthly and yearly costs
 - Category breakdown
 - Expense history
 - Direct Debit payment method

@@ -255,3 +255,11 @@ Monthly equivalent is estimated using:
 Annual equivalent is the monthly equivalent × 12.
 
 Production should use an actual recurrence engine for precise payment dates, leap years, month lengths and future reminder scheduling.
+
+## Simplified expense recurrence model
+
+The MVP supports One-off, Monthly and Yearly expenses only.
+
+Monthly costs carry forward automatically into the next-month projection. One-off expenses with a date in the next calendar month are also included. Yearly costs contribute to the annual total and are divided by 12 for the monthly overview.
+
+Custom recurrence patterns are intentionally deferred until a proper production recurrence engine is added.

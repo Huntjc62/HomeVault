@@ -109,3 +109,12 @@
 - Added defensive handling for malformed localStorage expense data.
 - Fixed recurring annual/monthly calculations for legacy entries.
 - Added safer page navigation error handling so one bad record cannot blank the entire application.
+
+## Expense MVP simplification
+
+- Removed custom recurring frequency options for now.
+- Kept One-off, Monthly and Yearly.
+- Monthly expenses are treated as ongoing monthly costs.
+- Monthly expenses are automatically included in next month's projected costs.
+- One-off expenses dated next month are included in the projection.
+- Legacy unsupported frequency values are safely treated as Monthly.

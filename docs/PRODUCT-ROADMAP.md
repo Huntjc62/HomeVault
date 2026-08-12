@@ -178,3 +178,12 @@ Potential future records:
 - [ ] Next-occurrence engine
 - [ ] Recurring payment reminders
 - [ ] Pause/end recurring cost
+
+## Expense MVP — simplified recurrence
+
+- [x] One-off
+- [x] Monthly
+- [x] Yearly
+- [x] Monthly costs carried into next month
+- [x] Next-month projected cost
+- [ ] Future custom recurrence engine

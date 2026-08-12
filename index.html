@@ -374,15 +374,23 @@ function notificationPreview(title,date){
 
 function expenseYearTotal(){
  return state.expenses.reduce((sum,e)=>{
-   if(e.frequency==="One-off") return sum+Number(e.amount||0);
-   return sum+recurringAnnualEquivalent(e);
+   const amount=Number(e.amount||0);
+   if(e.frequency==="Monthly") return sum+amount*12;
+   if(e.frequency==="Yearly") return sum+amount;
+   return sum+amount;
  },0);
 }
-function recurringMonthlyTotal(scope){
- return state.expenses.reduce((sum,e)=>{
-   if(scope && expenseScope(e)!==scope)return sum;
-   return sum+recurringMonthlyEquivalent(e);
- },0);
+function recurringMonthlyEquivalent(e){
+ const amount=Number(e.amount||0);
+ if(e.frequency==="Monthly") return amount;
+ if(e.frequency==="Yearly") return amount/12;
+ return 0;
+}
+function recurringAnnualEquivalent(e){
+ const amount=Number(e.amount||0);
+ if(e.frequency==="Monthly") return amount*12;
+ if(e.frequency==="Yearly") return amount;
+ return 0;
 }
 function currentMonthActualTotal(scope){
  const now=new Date(),year=now.getFullYear(),month=now.getMonth();
@@ -390,22 +398,30 @@ function currentMonthActualTotal(scope){
    if(scope && expenseScope(e)!==scope)return sum;
    if(e.frequency!=="One-off" || !e.date)return sum;
    const d=new Date(e.date+"T00:00:00");
-   if(Number.isNaN(d.getTime()))return sum;
-   return d.getFullYear()===year && d.getMonth()===month ? sum+Number(e.amount||0) : sum;
+   return !Number.isNaN(d.getTime()) && d.getFullYear()===year && d.getMonth()===month
+     ? sum+Number(e.amount||0) : sum;
  },0);
 }
-function projectedMonthTotal(scope){
- return recurringMonthlyTotal(scope)+currentMonthActualTotal(scope);
+function nextMonthProjectedCost(scope){
+ const now=new Date();
+ const next=new Date(now.getFullYear(),now.getMonth()+1,1);
+ const recurring=state.expenses.reduce((sum,e)=>{
+   if(scope && expenseScope(e)!==scope)return sum;
+   return sum+recurringMonthlyEquivalent(e);
+ },0);
+ const oneOffs=state.expenses.reduce((sum,e)=>{
+   if(scope && expenseScope(e)!==scope)return sum;
+   if(e.frequency!=="One-off" || !e.date)return sum;
+   const d=new Date(e.date+"T00:00:00");
+   return !Number.isNaN(d.getTime()) && d.getFullYear()===next.getFullYear() && d.getMonth()===next.getMonth()
+     ? sum+Number(e.amount||0) : sum;
+ },0);
+ return recurring+oneOffs;
 }
-function homeMonthlyCost(){
- return projectedMonthTotal("Home");
-}
-function personalMonthlyCost(){
- return projectedMonthTotal("Personal");
-}
-function combinedMonthlyCost(){
- return homeMonthlyCost()+personalMonthlyCost();
-}
+function projectedMonthTotal(scope){ return nextMonthProjectedCost(scope); }
+function homeMonthlyCost(){ return nextMonthProjectedCost("Home"); }
+function personalMonthlyCost(){ return nextMonthProjectedCost("Personal"); }
+function combinedMonthlyCost(){ return homeMonthlyCost()+personalMonthlyCost(); }
 function expenseBreakdown(){
  const groups={Home:0,Vehicle:0,Repairs:0,Appliances:0,Boiler:0,Other:0};
  state.expenses.forEach(e=>{
@@ -418,33 +434,9 @@ function expenseBreakdown(){
 function expenseCategoryLabel(c){
  return ({Home:"🏠 Home",Vehicle:"🚗 Car",Repairs:"🔧 Repairs",Appliances:"🧊 Appliances",Boiler:"🔥 Boiler",Other:"📦 Other"}[c]||c);
 }
-function getFrequencyLabel(e){
- if(e.frequency!=="Recurring")return expenseFrequencyLabel(e.frequency);
- const n=Number(e.interval||1), unit=e.intervalUnit||"month";
- if(unit==="day")return `Every ${n} day${n===1?"":"s"}`;
- if(unit==="week")return `Every ${n} week${n===1?"":"s"}`;
- if(unit==="month")return `Every ${n} month${n===1?"":"s"}`;
- return "Recurring";
-}
-function recurringMonthlyEquivalent(e){
- const amount=Number(e.amount||0);
- if(!Number.isFinite(amount))return 0;
- if(e.frequency!=="Recurring") return e.frequency==="Monthly"?amount:e.frequency==="Yearly"?amount/12:e.frequency==="One-off"?0:amount/12;
- const n=Math.max(1,Number(e.interval||1)), unit=e.intervalUnit||"month";
- if(unit==="day") return amount*(365/12)/n;
- if(unit==="week") return amount*(52/12)/n;
- if(unit==="month") return amount/n;
- return amount/12;
-}
-function recurringAnnualEquivalent(e){
- if(e.frequency!=="Recurring") return e.frequency==="Monthly"?Number(e.amount||0)*12:e.frequency==="Yearly"?Number(e.amount||0):Number(e.amount||0);
- return recurringMonthlyEquivalent(e)*12;
-}
-
 function expenseFrequencyLabel(f){
- return ({Monthly:"Monthly",Yearly:"Yearly", "One-off":"One-off",Recurring:"Recurring"}[f]||f||"One-off");
+ return ({Monthly:"Monthly",Yearly:"Yearly","One-off":"One-off"}[f]||f||"One-off");
 }
-
 
 function openEditExpenseForm(id){
  const e=state.expenses.find(x=>x.id===id);
@@ -453,8 +445,7 @@ function openEditExpenseForm(id){
   <div class="field"><label>Expense</label><input name="title" value="${esc(e.title)}" required></div>
   <div class="field"><label>Expense type</label><select name="scope"><option value="Home" ${expenseScope(e)==="Home"?"selected":""}>🏠 Home expense</option><option value="Personal" ${expenseScope(e)==="Personal"?"selected":""}>👤 Personal expense</option></select></div>
   <div class="field"><label>Amount (£)</label><input type="number" step="0.01" min="0" name="amount" value="${esc(e.amount)}" required></div>
-  <div class="field"><label>Frequency</label><select name="frequency" onchange="toggleEditExpenseFrequency(this.value)"><option value="One-off" ${e.frequency==="One-off"?"selected":""}>One-off</option><option value="Monthly" ${e.frequency==="Monthly"?"selected":""}>Monthly</option><option value="Yearly" ${e.frequency==="Yearly"?"selected":""}>Yearly</option><option value="Recurring" ${e.frequency==="Recurring"?"selected":""}>Recurring</option></select></div>
-  <div id="editRecurringOptions" class="field full" style="display:${e.frequency==="Recurring"?"block":"none"}"><div class="form-grid"><div class="field"><label>Repeat every</label><input type="number" min="1" step="1" name="interval" value="${esc(e.interval||1)}"></div><div class="field"><label>Unit</label><select name="intervalUnit"><option value="day" ${e.intervalUnit==="day"?"selected":""}>Day(s)</option><option value="week" ${e.intervalUnit==="week"?"selected":""}>Week(s)</option><option value="month" ${e.intervalUnit==="month"?"selected":""}>Month(s)</option></select></div></div></div>
+  <div class="field"><label>Frequency</label><select name="frequency" onchange="toggleEditExpenseFrequency(this.value)"><option value="One-off" ${e.frequency==="One-off"?"selected":""}>One-off</option><option value="Monthly" ${e.frequency==="Monthly"?"selected":""}>Monthly</option><option value="Yearly" ${e.frequency==="Yearly"?"selected":""}>Yearly</option></select></div>
   <div class="field"><label id="expenseDateLabel">${e.frequency==="One-off"?"Date":e.frequency==="Monthly"?"First payment date":"Renewal / payment date"}</label><input type="date" name="date" value="${esc(e.date)}" required></div>
   <div class="field"><label>Category</label><select name="category">
    <option value="Home" ${e.category==="Home"?"selected":""}>Home</option>
@@ -495,8 +486,6 @@ function updateExpense(event,id){
    amount:Number(f.get("amount")||0),
    scope:f.get("scope")||"Home",
    frequency:f.get("frequency"),
-   interval:Number(f.get("interval")||1),
-   intervalUnit:f.get("intervalUnit")||"month",
    date:f.get("date"),
    category:f.get("category"),
    payment:f.get("payment"),
@@ -518,9 +507,9 @@ function expensesPage(){
  const year=new Date().getFullYear();
  const total=expenseYearTotal();
  const monthly=recurringMonthlyTotal();
- const projected=projectedMonthTotal();
- const homeMonthly=homeMonthlyCost();
- const personalMonthly=personalMonthlyCost();
+ const projected=nextMonthProjectedCost();
+ const homeMonthly=nextMonthProjectedCost("Home");
+ const personalMonthly=nextMonthProjectedCost("Personal");
  const combinedMonthly=combinedMonthlyCost();
  const b=expenseBreakdown();
  const rows=state.expenses.slice().sort((a,b)=>{
@@ -554,14 +543,14 @@ function expensesPage(){
    </div>
  </div></div>
 
- <div class="section"><h2>Recurring commitments</h2><div class="card">
-   ${state.expenses.filter(e=>e.frequency==="Monthly"||e.frequency==="Yearly"||e.frequency==="Recurring").length?`
+ <div class="section"><h2>Monthly & yearly commitments</h2><div class="card">
+   ${state.expenses.filter(e=>e.frequency==="Monthly"||e.frequency==="Yearly").length?`
    <table><thead><tr><th>Cost</th><th>Type</th><th>Amount</th><th>Frequency</th><th>Monthly equivalent</th><th>Payment</th><th>Actions</th></tr></thead><tbody>
-   ${state.expenses.filter(e=>e.frequency==="Monthly"||e.frequency==="Yearly"||e.frequency==="Recurring").map(e=>{
+   ${state.expenses.filter(e=>e.frequency==="Monthly"||e.frequency==="Yearly").map(e=>{
       const amount=Number(e.amount||0), annual=recurringAnnualEquivalent(e), monthlyEq=recurringMonthlyEquivalent(e);
-      return `<tr><td><strong>${esc(e.title)}</strong><br><span style="font-size:12px;color:var(--muted)">${esc(e.related||"")}</span></td><td>${expenseScope(e)==="Personal"?"👤 Personal":"🏠 Home"}</td><td>£${amount.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td><span class="tag">${getFrequencyLabel(e)}</span></td><td>£${monthlyEq.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${esc(e.payment||"—")}</td><td><button class="btn btn-ghost" style="padding:7px 10px" onclick="openEditExpenseForm('${esc(e.id)}')">Edit</button></td></tr>`;
+      return `<tr><td><strong>${esc(e.title)}</strong><br><span style="font-size:12px;color:var(--muted)">${esc(e.related||"")}</span></td><td>${expenseScope(e)==="Personal"?"👤 Personal":"🏠 Home"}</td><td>£${amount.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td><span class="tag">${expenseFrequencyLabel(e.frequency)}</span></td><td>£${monthlyEq.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${esc(e.payment||"—")}</td><td><button class="btn btn-ghost" style="padding:7px 10px" onclick="openEditExpenseForm('${esc(e.id)}')">Edit</button></td></tr>`;
    }).join("")}
-   </tbody></table>`:`<div class="empty"><h3>No recurring costs yet</h3><p>Add weekly, monthly, yearly or custom recurring costs. HomeVault converts them into a monthly and annual figure.</p></div>`}
+   </tbody></table>`:`<div class="empty"><h3>No recurring costs yet</h3><p>Monthly costs are ongoing and are automatically included in next month's projected costs.</p></div>`}
  </div></div>
 
  <div class="section"><h2>Annual home breakdown</h2><div class="grid grid-3">
@@ -583,8 +572,7 @@ function openExpenseForm(){
   <div class="field"><label>Expense</label><input name="title" placeholder="Council tax / Groceries / Boiler service" required></div>
   <div class="field"><label>Expense type</label><select name="scope" onchange="togglePersonalExpenseFields(this.value)"><option value="Home">🏠 Home expense</option><option value="Personal">👤 Personal expense</option></select></div>
   <div class="field"><label>Amount (£)</label><input type="number" step="0.01" min="0" name="amount" placeholder="95" required></div>
-  <div class="field"><label>Frequency</label><select name="frequency" onchange="toggleExpenseFrequency(this.value)"><option value="One-off">One-off</option><option value="Monthly">Monthly</option><option value="Yearly">Yearly</option><option value="Recurring">Recurring</option></select></div>
-  <div id="recurringOptions" class="field full" style="display:none"><div class="form-grid"><div class="field"><label>Repeat every</label><input type="number" min="1" step="1" value="1" name="interval"></div><div class="field"><label>Unit</label><select name="intervalUnit"><option value="day">Day(s)</option><option value="week">Week(s)</option><option value="month">Month(s)</option></select></div></div></div>
+  <div class="field"><label>Frequency</label><select name="frequency" onchange="toggleExpenseFrequency(this.value)"><option value="One-off">One-off</option><option value="Monthly">Monthly</option><option value="Yearly">Yearly</option></select></div>
   <div class="field"><label id="expenseDateLabel">Date</label><input type="date" name="date" value="${new Date().toISOString().slice(0,10)}" required></div>
   <div class="field"><label>Category</label><select name="category"><option value="Home">Home</option><option value="Vehicle">Car</option><option value="Repairs">Repairs</option><option value="Appliances">Appliances</option><option value="Boiler">Boiler</option><option value="Other">Other</option><option value="Groceries">Groceries</option><option value="Transport">Transport</option><option value="Entertainment">Entertainment</option><option value="Shopping">Shopping</option><option value="Health">Health</option><option value="Subscriptions">Subscriptions</option><option value="Personal">Personal</option></select></div>
   <div class="field"><label>Payment method</label><select name="payment"><option>Direct Debit</option><option>Card</option><option>Bank transfer</option><option>Cash</option><option>Finance</option><option>Other</option></select></div>
@@ -611,22 +599,12 @@ function togglePersonalExpenseFields(value){
    if(related) related.placeholder="BMW 3 Series / Boiler / Home";
  }
 }
-function toggleExpenseFrequency(value){
- const box=document.getElementById("recurringOptions");
- if(box)box.style.display=value==="Recurring"?"block":"none";
- toggleExpenseDateLabel(value);
-}
-function toggleEditExpenseFrequency(value){
- const box=document.getElementById("editRecurringOptions");
- if(box)box.style.display=value==="Recurring"?"block":"none";
- toggleExpenseDateLabel(value);
-}
 function saveExpense(e){
  e.preventDefault();
  const f=new FormData(e.target),file=e.target.receipt.files[0];
  state.expenses.unshift({
    id:uid(),title:f.get("title"),amount:Number(f.get("amount")||0),date:f.get("date"),
-   scope:f.get("scope")||"Home",frequency:f.get("frequency"),interval:Number(f.get("interval")||1),intervalUnit:f.get("intervalUnit")||"month",category:f.get("category"),related:f.get("related"),
+   scope:f.get("scope")||"Home",frequency:f.get("frequency"),category:f.get("category"),related:f.get("related"),
    payment:f.get("payment"),nextDate:f.get("nextDate"),notes:f.get("notes"),receipt:file?.name||""
  });
  save();addActivity("Added expense");closeModal();expensesPage();toast("Expense added");
@@ -658,7 +636,7 @@ function buildTimelineEvents(){
    if(a.purchaseDate)events.push({date:a.purchaseDate,icon:a.icon||"🧊",title:`${a.name||"Appliance"} purchased`,detail:`${a.manufacturer||""} ${a.model||""}`.trim(),category:"Appliance"});
  });
  state.expenses.forEach(e=>{
-   if(e.date)events.push({date:e.date,icon:e.category==="Vehicle"?"🚗":e.category==="Boiler"?"🔥":e.category==="Repairs"?"🔧":e.category==="Appliances"?"🧊":"💷",title:e.title||"Expense recorded",detail:`${e.category||"Other"}${e.amount?` · £${Number(e.amount).toLocaleString("en-GB",{minimumFractionDigits:2})}`:""}${e.frequency&&e.frequency!=="One-off"?` · ${getFrequencyLabel(e)}`:""}${e.related?` · ${e.related}`:""}`,category:"Expense"});
+   if(e.date)events.push({date:e.date,icon:e.category==="Vehicle"?"🚗":e.category==="Boiler"?"🔥":e.category==="Repairs"?"🔧":e.category==="Appliances"?"🧊":"💷",title:e.title||"Expense recorded",detail:`${e.category||"Other"}${e.amount?` · £${Number(e.amount).toLocaleString("en-GB",{minimumFractionDigits:2})}`:""}${e.frequency&&e.frequency!=="One-off"?` · ${expenseFrequencyLabel(e.frequency)}`:""}${e.related?` · ${e.related}`:""}`,category:"Expense"});
  });
  state.documents.forEach(d=>{
    if(d.date)events.push({date:d.date,icon:"📄",title:"Document added",detail:d.name||d.category||"Document",category:"Document"});
