@@ -30,7 +30,7 @@ hvReady.then(async ()=>{
     <div class="section card"><h2>Recent activity</h2>${state.activity.slice(0,20).map(a=>`<div class="record"><div class="record-icon">•</div><div class="record-meta"><strong>${esc(a.text)}</strong><span>${new Date(a.date).toLocaleString("en-GB")}</span></div></div>`).join("")||"<p>No activity yet.</p>"}</div>`;
   }catch(e){console.error(e);showFirebaseError(e)}
 }).catch(showFirebaseError);
-async function exportData(){
+window.exportData = async function exportData(){
   const payload={uid:hvUser.uid,email:hvUser.email,exportedAt:new Date().toISOString(),data:state};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="homevault-data.json";a.click();URL.revokeObjectURL(a.href);
