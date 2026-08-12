@@ -8,9 +8,10 @@ hvReady.then(async ()=>{
   try{
     if(!requireAuth()) return;
     pageBase("admin","Admin","Administration, user access and data controls.");
-    const token=await hvUser.getIdTokenResult(true);
-    if(token.claims.admin!==true){
-      document.getElementById("content").innerHTML=empty("🔒","Admin only","This section is restricted to accounts with the Firebase admin claim.");
+    const token=await hvUser.getIdTokenResult();
+    const isAdmin=token.claims.admin===true || state.profile?.role==="admin";
+    if(!isAdmin){
+      document.getElementById("content").innerHTML=empty("🔒","Admin only","This section is restricted to accounts marked as admin.");
       return;
     }
     const usersSnap=await hvDb.collection("users").get();

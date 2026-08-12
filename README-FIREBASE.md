@@ -185,3 +185,18 @@ The values are in `assets/firebase-config.js`.
 The browser Firebase configuration is not a secret credential. Do not put Firebase Admin SDK service-account JSON, private keys, or other server credentials into the web app. Protect the application with Authentication plus Firestore/Storage Security Rules.
 
 The supplied Firebase project config has been wired into the current static prototype. The app currently uses Firebase's browser compat SDK for minimal changes to the existing page code. `assets/firebase-modular-reference.js` shows the equivalent modular `initializeApp()` pattern for the later npm/Vite production build.
+
+
+## Admin setup used by this package
+
+For this GitHub Pages build, the Firestore user profile you already created is enough to enable the Admin area:
+
+`users/{YOUR_UID}`
+
+with:
+
+`role: "admin"`
+
+The Firestore rules included in this package recognise that admin profile and allow that account to read/manage user profiles and user subcollections. Normal users cannot change their own role from `user` to `admin`.
+
+A Firebase custom claim is still recommended later for the strongest production-grade role management, but it is not required to use the admin area in this build.

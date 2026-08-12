@@ -15,6 +15,9 @@ function money(v){return "£"+Number(v||0).toLocaleString("en-GB",{minimumFracti
 function date(v){if(!v)return "—";const d=new Date(v+"T00:00:00");return isNaN(d)?"—":d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}
 function today(){return new Date().toISOString().slice(0,10)}
 function uid(){return crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+function firebaseStatus(){
+ return hvUser && window.hvDb ? "Connected to Firebase" : "Not connected";
+}
 function toast(msg){const x=document.createElement("div");x.className="toast";x.textContent=msg;document.body.appendChild(x);setTimeout(()=>x.remove(),2600)}
 function modal(title,body){document.getElementById("modalTitle").textContent=title;document.getElementById("modalBody").innerHTML=body;document.getElementById("modal").classList.add("show")}
 function closeModal(){document.getElementById("modal").classList.remove("show")}
@@ -64,7 +67,10 @@ async function syncCollection(name){
  const wanted=new Set((state[name]||[]).map(x=>x.id));
  const batch=hvDb.batch();
  snap.docs.forEach(d=>{if(!wanted.has(d.id))batch.delete(d.ref)});
- (state[name]||[]).forEach(item=>batch.set(ref.doc(item.id),item));
+ (state[name]||[]).forEach(item=>{
+   const clean=JSON.parse(JSON.stringify(item));
+   batch.set(ref.doc(item.id),clean,{merge:true});
+ });
  await batch.commit();
 }
 async function save(){
@@ -100,8 +106,13 @@ function setupShell(page,title,subtitle){
  document.getElementById("pageTitle").textContent=title;document.getElementById("pageSubtitle").textContent=subtitle||"";
  document.querySelectorAll(".nav a").forEach(a=>a.classList.toggle("active",a.dataset.page===page));
  const admin=document.getElementById("adminNav");
- if(admin) admin.style.display="none";
- if(hvUser.getIdTokenResult){hvUser.getIdTokenResult().then(t=>{if(admin)admin.style.display=t.claims.admin===true?"block":"none"})}
+ if(admin){
+   admin.style.display="none";
+   const show=state.profile?.role==="admin";
+   if(show) admin.style.display="block";
+   // If a Firebase custom claim has been configured, it also grants admin UI access.
+   hvUser.getIdTokenResult().then(t=>{if(t.claims.admin===true)admin.style.display="block"}).catch(()=>{});
+ }
 }
 function nav(page){location.href=page+".html"}
 function toggleMenu(){document.getElementById("sidebar").classList.toggle("open")}
