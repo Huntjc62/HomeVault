@@ -1,37 +1,62 @@
-# HomeVault V2
+# HomeVault V3 — Firebase Edition
 
-A multi-page HomeVault MVP prototype.
+HomeVault is now structured as a real authenticated web-app prototype.
 
-## Included
-- Separate HTML page for every navigation item
-- Shared visual system in `assets/styles.css`
-- Shared data/auth logic in `assets/app.js`
-- Admin account: `admin` / `admin`
-- User registration
-- Browser-local persistence with localStorage
-- Home ownership/rental profile
-- Boiler and service history
-- Vehicle and history
-- Appliances
-- Documents/scanner prototype
-- Reminders
-- Home + Personal expenses
-- One-off / Monthly / Yearly expenses
-- Direct Debit payment method
+## Backend
+- Firebase Authentication — email/password accounts
+- Cloud Firestore — user data
+- Cloud Storage — private document storage foundation
+- Firebase Security Rules — per-user access control
+- Firebase custom claims — admin access
+
+## Pages
+Every navigation item remains a separate page:
+dashboard.html
+home.html
+boiler.html
+vehicle.html
+appliances.html
+documents.html
+scanner.html
+reminders.html
+expenses.html
+timeline.html
+admin.html
+
+## Authentication
+The old hard-coded `admin / admin` login has intentionally been removed.
+
+Create the real admin account in Firebase Authentication, then run `scripts/set-admin.js` to give that account the `admin: true` custom claim.
+
+## Expenses
+- Home or Personal
+- One-off / Monthly / Yearly
+- Direct Debit and other payment methods
+- Edit/delete
 - Home monthly cost
 - Personal monthly cost
 - Combined monthly cost
 - Next-month projection
-- Editable/deletable expenses
-- Home timeline
-- Admin dashboard and JSON export
+- Firestore persistence per authenticated user
 
-## Run
-Open `login.html` in a browser. For a hosted version, deploy the folder to GitHub Pages or another static host.
+## Data model
+Each user gets a UID-owned Firestore namespace:
 
-## Demo login
-Username: `admin`
-Password: `admin`
+users/{uid}/{collection}/{recordId}
 
-## Important
-This is a functional browser prototype, not a production SaaS backend. Data is stored locally in the browser. Documents currently store document metadata/filename only. Production should use authenticated database storage, private cloud file storage, real email/browser notifications, and server-side security.
+This means one user's home, expenses, documents, vehicles etc. are isolated from another user's data by Firestore Security Rules.
+
+## Setup
+Read **README-FIREBASE.md** before running the app.
+
+The Firebase web config belongs in:
+`assets/firebase-config.js`
+
+Never commit a Firebase Admin service-account JSON file.
+
+## Official Firebase references
+- Authentication: https://firebase.google.com/docs/auth/web/start
+- Firestore: https://firebase.google.com/docs/firestore
+- Firestore Security Rules: https://firebase.google.com/docs/firestore/security
+- Storage Security Rules: https://firebase.google.com/docs/storage/security
+- Custom claims: https://firebase.google.com/docs/auth/admin/custom-claims

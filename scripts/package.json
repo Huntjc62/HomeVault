@@ -1,0 +1,7 @@
+{
+  "name": "homevault-admin-tools",
+  "private": true,
+  "dependencies": {
+    "firebase-admin": "latest"
+  }
+}

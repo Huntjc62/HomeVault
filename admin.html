@@ -1,5 +1,37 @@
-<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HomeVault — Admin</title><link rel="stylesheet" href="assets/styles.css"></head><body><script src="assets/app.js"></script><script>
-if(!requireAuth()){} else {pageBase("admin","Admin","Prototype administration and local app data controls.");const s=session();if(s.role!=="Admin"){document.getElementById("content").innerHTML=empty("🔒","Admin only","This section is restricted.");}else{document.getElementById("content").innerHTML=`<div class="grid g4"><div class="card stat"><div><div class="stat-num">${state.users.length}</div><p>Users</p></div><div class="stat-icon">👥</div></div><div class="card stat"><div><div class="stat-num">${state.expenses.length}</div><p>Expenses</p></div><div class="stat-icon">💷</div></div><div class="card stat"><div><div class="stat-num">${state.documents.length}</div><p>Documents</p></div><div class="stat-icon">📄</div></div><div class="card stat"><div><div class="stat-num">${state.activity.length}</div><p>Activity events</p></div><div class="stat-icon">📊</div></div></div><div class="section card"><h2>Demo controls</h2><p>All data in this prototype is stored in this browser using localStorage.</p><div class="actions"><button class="btn btn-primary" onclick="exportData()">Export data</button><button class="btn btn-danger" onclick="resetAll()">Reset all demo data</button></div></div><div class="section card"><h2>Recent activity</h2>${state.activity.slice(0,20).map(a=>`<div class="record"><div class="record-icon">•</div><div class="record-meta"><strong>${esc(a.text)}</strong><span>${new Date(a.date).toLocaleString("en-GB")}</span></div></div>`).join("")||"<p>No activity yet.</p>"}</div>`}}
-function exportData(){const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="homevault-data.json";a.click();URL.revokeObjectURL(a.href)}
-function resetAll(){if(confirm("Delete all HomeVault demo data?")){localStorage.removeItem(KEY);location.href="dashboard.html"}}
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HomeVault — Admin</title><link rel="stylesheet" href="assets/styles.css"></head><body><script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-storage-compat.js"></script>
+<script src="assets/firebase-config.js"></script>
+<script src="assets/app.js"></script><script>
+hvReady.then(async ()=>{
+  try{
+    if(!requireAuth()) return;
+    pageBase("admin","Admin","Administration, user access and data controls.");
+    const token=await hvUser.getIdTokenResult(true);
+    if(token.claims.admin!==true){
+      document.getElementById("content").innerHTML=empty("🔒","Admin only","This section is restricted to accounts with the Firebase admin claim.");
+      return;
+    }
+    const usersSnap=await hvDb.collection("users").get();
+    const userCount=usersSnap.size;
+    document.getElementById("content").innerHTML=`<div class="grid g4">
+      <div class="card stat"><div><div class="stat-num">${userCount}</div><p>Users</p></div><div class="stat-icon">👥</div></div>
+      <div class="card stat"><div><div class="stat-num">${state.expenses.length}</div><p>Your expenses</p></div><div class="stat-icon">💷</div></div>
+      <div class="card stat"><div><div class="stat-num">${state.documents.length}</div><p>Your documents</p></div><div class="stat-icon">📄</div></div>
+      <div class="card stat"><div><div class="stat-num">${state.activity.length}</div><p>Your activity</p></div><div class="stat-icon">📊</div></div>
+    </div>
+    <div class="section card"><h2>Users</h2><p class="muted">Firebase Authentication remains the source of truth for sign-in accounts. These Firestore profiles provide app-level information.</p>
+    <div class="table-wrap"><table><thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Created</th></tr></thead><tbody>
+    ${usersSnap.docs.map(d=>{const u=d.data();return `<tr><td>${esc(u.email||d.id)}</td><td>${esc(u.displayName||"—")}</td><td>${esc(u.role||"user")}</td><td>${u.createdAt?.toDate?u.createdAt.toDate().toLocaleDateString("en-GB"):"—"}</td></tr>`}).join("")}
+    </tbody></table></div></div>
+    <div class="section card"><h2>Data controls</h2><p>Export your current Firebase-backed records as JSON. Admin service-account actions must be performed from a trusted environment.</p><div class="actions"><button class="btn btn-primary" onclick="exportData()">Export my data</button></div></div>
+    <div class="section card"><h2>Recent activity</h2>${state.activity.slice(0,20).map(a=>`<div class="record"><div class="record-icon">•</div><div class="record-meta"><strong>${esc(a.text)}</strong><span>${new Date(a.date).toLocaleString("en-GB")}</span></div></div>`).join("")||"<p>No activity yet.</p>"}</div>`;
+  }catch(e){console.error(e);showFirebaseError(e)}
+}).catch(showFirebaseError);
+async function exportData(){
+  const payload={uid:hvUser.uid,email:hvUser.email,exportedAt:new Date().toISOString(),data:state};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="homevault-data.json";a.click();URL.revokeObjectURL(a.href);
+}
 </script></body></html>

@@ -1,24 +1,36 @@
-# Architecture
+# HomeVault V3 architecture
 
-Each navigation item has its own HTML page:
-- dashboard.html
-- home.html
-- boiler.html
-- vehicle.html
-- appliances.html
-- documents.html
-- scanner.html
-- reminders.html
-- expenses.html
-- timeline.html
-- admin.html
+## Client
+Static multi-page HTML/CSS/JS.
 
-Shared:
-- assets/styles.css — visual system
-- assets/app.js — authentication, persistence, common UI and expense engine
+## Authentication
+Firebase Authentication with Email/Password.
 
-Data:
-- localStorage key: `homevault_v2`
-- sessionStorage key: `homevault_session`
+## Database
+Cloud Firestore:
 
-The next production step is replacing localStorage with a real backend such as Firebase or Supabase, with per-user security rules and private file storage.
+users/{uid}
+  homes/
+  boilers/
+  vehicles/
+  appliances/
+  documents/
+  reminders/
+  expenses/
+  timelineEvents/
+  activity/
+
+## Files
+Cloud Storage:
+
+users/{uid}/...
+
+Firestore stores metadata and relationships; Storage stores binary files.
+
+## Authorisation
+Firestore and Storage rules check `request.auth.uid == userId`.
+
+Admin access is granted using the Firebase Auth custom claim `admin: true`, set by the Firebase Admin SDK. Custom claims are for access control, not general profile data.
+
+## Why this structure
+Each user's records are isolated under their Firebase UID. It also gives us a clean path to add sharing later without rewriting the entire database.

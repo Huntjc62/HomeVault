@@ -1,42 +1,110 @@
 
-const KEY="homevault_v2";
-const SESSION="homevault_session";
-const DEFAULT={
- homes:[],boilers:[],vehicles:[],appliances:[],documents:[],reminders:[],expenses:[],timelineEvents:[],
- users:[{username:"admin",password:"admin",role:"Admin",name:"HomeVault Admin"}],
- reminderSettings:{days:[30,14,7,1],email:true,browser:true},activity:[]
-};
+const SESSION="homevault_firebase_session";
+const COLLECTIONS=["homes","boilers","vehicles","appliances","documents","reminders","expenses","timelineEvents","activity"];
+const DEFAULT={homes:[],boilers:[],vehicles:[],appliances:[],documents:[],reminders:[],expenses:[],timelineEvents:[],activity:[]};
+let state=structuredClone(DEFAULT);
+let hvUser=null;
+let hvReadyResolve;
+let hvReadyReject;
+window.hvReady=new Promise((resolve,reject)=>{hvReadyResolve=resolve;hvReadyReject=reject});
+let hvSaveTimer=null;
+
 function clone(x){return JSON.parse(JSON.stringify(x))}
-function load(){let s;try{s=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){s=null}return Object.assign(clone(DEFAULT),s||{},{
- homes:Array.isArray(s?.homes)?s.homes:[],boilers:Array.isArray(s?.boilers)?s.boilers:[],vehicles:Array.isArray(s?.vehicles)?s.vehicles:[],
- appliances:Array.isArray(s?.appliances)?s.appliances:[],documents:Array.isArray(s?.documents)?s.documents:[],reminders:Array.isArray(s?.reminders)?s.reminders:[],
- expenses:Array.isArray(s?.expenses)?s.expenses:[],timelineEvents:Array.isArray(s?.timelineEvents)?s.timelineEvents:[],users:Array.isArray(s?.users)&&s.users.length?s.users:clone(DEFAULT.users),
- activity:Array.isArray(s?.activity)?s.activity:[],reminderSettings:s?.reminderSettings||clone(DEFAULT.reminderSettings)
-})}
-let state=load();
-function save(){localStorage.setItem(KEY,JSON.stringify(state))}
-function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
 function esc(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function money(v){return "£"+Number(v||0).toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}
 function date(v){if(!v)return "—";const d=new Date(v+"T00:00:00");return isNaN(d)?"—":d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}
 function today(){return new Date().toISOString().slice(0,10)}
-function addActivity(text){state.activity.unshift({id:uid(),text,date:new Date().toISOString()});state.activity=state.activity.slice(0,40);save()}
+function uid(){return crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
 function toast(msg){const x=document.createElement("div");x.className="toast";x.textContent=msg;document.body.appendChild(x);setTimeout(()=>x.remove(),2600)}
 function modal(title,body){document.getElementById("modalTitle").textContent=title;document.getElementById("modalBody").innerHTML=body;document.getElementById("modal").classList.add("show")}
 function closeModal(){document.getElementById("modal").classList.remove("show")}
-function session(){return JSON.parse(sessionStorage.getItem(SESSION)||"null")}
-function requireAuth(){if(!session()){location.href="login.html";return false}return true}
-function logout(){sessionStorage.removeItem(SESSION);location.href="login.html"}
+function session(){return hvUser?{uid:hvUser.uid,email:hvUser.email,name:hvUser.displayName||hvUser.email}:null}
+function formData(form){return Object.fromEntries(new FormData(form).entries())}
+
+function firebaseConfigured(){
+ const c=window.HOMEVAULT_FIREBASE_CONFIG;
+ return c && c.apiKey && !String(c.apiKey).includes("REPLACE_ME") && c.projectId && !String(c.projectId).includes("REPLACE_ME");
+}
+async function initFirebase(){
+ if(!firebaseConfigured()){
+   hvReadyReject(new Error("Firebase is not configured. Copy assets/firebase-config.example.js to assets/firebase-config.js and add your Firebase web config."));
+   return;
+ }
+ try{
+   if(!firebase.apps.length) firebase.initializeApp(window.HOMEVAULT_FIREBASE_CONFIG);
+   window.hvAuth=firebase.auth();
+   window.hvDb=firebase.firestore();
+   window.hvStorage=firebase.storage();
+   hvAuth.onAuthStateChanged(async user=>{
+     hvUser=user;
+     if(user){
+       try{await loadState();sessionStorage.setItem(SESSION,JSON.stringify({uid:user.uid,email:user.email,name:user.displayName||user.email}));hvReadyResolve(state)}
+       catch(e){console.error(e);hvReadyReject(e);showFirebaseError(e)}
+     }else{
+       sessionStorage.removeItem(SESSION);
+       hvReadyResolve(state);
+     }
+   });
+ }catch(e){console.error(e);hvReadyReject(e);showFirebaseError(e)}
+}
+async function loadState(){
+ state=clone(DEFAULT);
+ const uid=hvUser.uid;
+ const jobs=COLLECTIONS.map(async name=>{
+   const snap=await hvDb.collection("users").doc(uid).collection(name).get();
+   state[name]=snap.docs.map(d=>({id:d.id,...d.data()}));
+ });
+ await Promise.all(jobs);
+ const profile=await hvDb.collection("users").doc(uid).get();
+ state.profile=profile.exists?profile.data():{};
+}
+async function syncCollection(name){
+ const ref=hvDb.collection("users").doc(hvUser.uid).collection(name);
+ const snap=await ref.get();
+ const wanted=new Set((state[name]||[]).map(x=>x.id));
+ const batch=hvDb.batch();
+ snap.docs.forEach(d=>{if(!wanted.has(d.id))batch.delete(d.ref)});
+ (state[name]||[]).forEach(item=>batch.set(ref.doc(item.id),item));
+ await batch.commit();
+}
+async function save(){
+ if(!hvUser)return;
+ try{
+   await Promise.all(COLLECTIONS.map(syncCollection));
+   await hvDb.collection("users").doc(hvUser.uid).set({
+     email:hvUser.email||"",
+     displayName:hvUser.displayName||"",
+     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+   },{merge:true});
+ }catch(e){console.error("Save failed",e);toast("Could not save to Firebase. Check your connection.");throw e}
+}
+function queueSave(){clearTimeout(hvSaveTimer);hvSaveTimer=setTimeout(()=>save().catch(()=>{}),150)}
+async function addActivity(text){
+ state.activity.unshift({id:uid(),text,date:new Date().toISOString()});
+ state.activity=state.activity.slice(0,40);
+ queueSave();
+}
+function showFirebaseError(e){
+ const msg=esc(e?.message||"Firebase could not initialise.");
+ const box=`<div style="max-width:760px;margin:40px auto" class="card"><h2>Firebase setup required</h2><p>${msg}</p><div class="notice" style="margin-top:15px">Open <strong>README-FIREBASE.md</strong> and follow the setup steps. Once assets/firebase-config.js contains your Firebase web config, refresh this page.</div></div>`;
+ if(document.body)document.body.innerHTML=box;
+}
+function requireAuth(){
+ if(!hvUser){location.href="login.html";return false}
+ return true
+}
+function logout(){if(window.hvAuth)hvAuth.signOut().finally(()=>location.href="login.html");else location.href="login.html"}
 function setupShell(page,title,subtitle){
  if(!requireAuth())return;
- const s=session();document.getElementById("userName").textContent=s?.name||s?.username||"User";
+ const s=session();document.getElementById("userName").textContent=s?.name||s?.email||"User";
  document.getElementById("pageTitle").textContent=title;document.getElementById("pageSubtitle").textContent=subtitle||"";
  document.querySelectorAll(".nav a").forEach(a=>a.classList.toggle("active",a.dataset.page===page));
- const admin=document.getElementById("adminNav"); if(admin)admin.style.display=s?.role==="Admin"?"block":"none";
+ const admin=document.getElementById("adminNav");
+ if(admin) admin.style.display="none";
+ if(hvUser.getIdTokenResult){hvUser.getIdTokenResult().then(t=>{if(admin)admin.style.display=t.claims.admin===true?"block":"none"})}
 }
 function nav(page){location.href=page+".html"}
 function toggleMenu(){document.getElementById("sidebar").classList.toggle("open")}
-function formData(form){return Object.fromEntries(new FormData(form).entries())}
 function pageBase(page,title,subtitle,content){document.title="HomeVault — "+title;document.body.innerHTML=`
 <div class="app"><aside class="sidebar" id="sidebar"><div class="brand">Home<span>Vault</span></div><nav class="nav">
 <a data-page="dashboard" href="dashboard.html">🏠 <span>Dashboard</span></a>
@@ -54,7 +122,8 @@ function pageBase(page,title,subtitle,content){document.title="HomeVault — "+t
 </nav></aside>
 <main class="main"><div class="topbar"><div><button class="mobile-menu" onclick="toggleMenu()">☰</button><h1 id="pageTitle">${esc(title)}</h1><p id="pageSubtitle">${esc(subtitle||"")}</p></div><div class="user-pill">👤 <span id="userName">User</span></div></div><div id="content">${content}</div></main></div>
 <div id="modal" class="modal-backdrop" onclick="if(event.target===this)closeModal()"><div class="modal"><button class="close" onclick="closeModal()">×</button><h2 id="modalTitle"></h2><div id="modalBody"></div></div></div>`;setupShell(page,title,subtitle)}
-function empty(icon,title,text,button=""){return `<div class="empty"><div style="font-size:48px">${icon}</div><h3>${esc(title)}</h3><p>${esc(text)}</p>${button?`<div style="margin-top:16px">${button}</div>`:""}</div>`}
+function empty(icon,title,text,button=""){return `<div class="empty"><div style="font-size:48px">${icon}</div><h3>${esc(title)}</h3><p>${esc(text)}</p>${button?`<div style="margin-top:16px">${button}</div>`:""}`}
+initFirebase();
 function expenseScope(e){return e.scope==="Personal"?"Personal":"Home"}
 function expenseMonthly(e){if(e.frequency==="Monthly")return +e.amount||0;if(e.frequency==="Yearly")return (+e.amount||0)/12;return 0}
 function nextMonthOneOff(scope){const n=new Date();const y=n.getMonth()===11?n.getFullYear()+1:n.getFullYear(),m=(n.getMonth()+1)%12;return state.expenses.reduce((s,e)=>{if(expenseScope(e)!==scope||e.frequency!=="One-off"||!e.date)return s;const d=new Date(e.date+"T00:00:00");return d.getFullYear()===y&&d.getMonth()===m?s+(+e.amount||0):s},0)}
