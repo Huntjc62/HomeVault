@@ -164,3 +164,17 @@ Potential future records:
 - [ ] Spending alerts
 - [ ] Bank transaction import
 - [ ] Open banking integration
+
+## Recurring expense expansion
+
+- [x] One-off
+- [x] Monthly
+- [x] Yearly
+- [x] Weekly
+- [x] Every X days
+- [x] Every X weeks
+- [x] Every X months
+- [ ] Precise recurrence calendar
+- [ ] Next-occurrence engine
+- [ ] Recurring payment reminders
+- [ ] Pause/end recurring cost

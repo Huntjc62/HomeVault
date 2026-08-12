@@ -235,3 +235,23 @@ The monthly dashboard calculates:
 - Combined monthly cost = Home monthly cost + Personal monthly cost
 
 Production should allow custom personal categories and optionally support budgets, spending limits, bank transaction imports and account-specific privacy controls.
+
+## Custom recurring expenses
+
+Recurring expenses support:
+- interval number
+- interval unit: day, week or month
+
+Examples:
+- £12 every 7 days
+- £50 every 2 weeks
+- £100 every 3 months
+
+Monthly equivalent is estimated using:
+- Daily: amount × 365 / 12 / interval
+- Weekly: amount × 52 / 12 / interval
+- Monthly: amount / interval
+
+Annual equivalent is the monthly equivalent × 12.
+
+Production should use an actual recurrence engine for precise payment dates, leap years, month lengths and future reminder scheduling.

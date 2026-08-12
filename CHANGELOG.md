@@ -90,3 +90,15 @@
 - Added Combined monthly cost calculation.
 - Added a visual monthly home vs personal breakdown.
 - Updated expense forms and history to show expense type.
+
+## Recurring expense update
+
+- Added Recurring frequency.
+- Added weekly recurring costs.
+- Added every X days recurring costs.
+- Added every X weeks recurring costs.
+- Added every X months recurring costs.
+- Added monthly and yearly recurring costs.
+- Added automatic monthly equivalent calculations for custom frequencies.
+- Added automatic annual equivalent calculations for custom frequencies.
+- Added recurring frequency editing.

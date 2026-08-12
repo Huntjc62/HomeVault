@@ -110,7 +110,9 @@ This package is intentionally front-end focused. It can be opened locally or dep
 - Estimated annual total
 - Regular monthly cost calculation
 - Current-month one-off spend
+- Weekly and custom recurring costs
 - Monthly and yearly recurring costs
+- Every X days/weeks/months recurring costs
 - Category breakdown
 - Expense history
 - Direct Debit payment method
