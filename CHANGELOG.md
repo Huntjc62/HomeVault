@@ -39,3 +39,17 @@
 - Added mobile-friendly camera/file upload workflow.
 - Added prototype OCR/AI extraction preview.
 - Added Save to HomeVault flow for extracted document data.
+
+## Phase 4 — Expenses
+
+- Added Expenses section.
+- Added home cost tracking.
+- Added boiler, vehicle, appliance and repair categories.
+- Added annual expense total.
+- Added category breakdown.
+- Added expense history.
+- Added related record field.
+- Added payment type field.
+- Added receipt upload field.
+- Added dashboard home-cost summary.
+- Added expense quick-add action.

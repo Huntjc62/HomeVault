@@ -110,3 +110,17 @@ Potential future records:
 - [ ] Confidence scoring
 - [ ] User confirmation before save
 - [ ] Automatic record matching
+
+## Phase 4 — Expenses
+
+- [x] Expense records
+- [x] Annual cost dashboard
+- [x] Category breakdown
+- [x] Related asset field
+- [x] Receipt upload workflow
+- [ ] Cloud receipt storage
+- [ ] Monthly spending charts
+- [ ] Annual comparisons
+- [ ] Asset lifetime cost
+- [ ] Replacement forecasting
+- [ ] Export expenses

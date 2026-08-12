@@ -91,6 +91,17 @@ This package is intentionally front-end focused. It can be opened locally or dep
 - Manuals
 - Other
 
+### Expenses
+- Home cost tracking
+- Vehicle costs
+- Boiler costs
+- Appliance costs
+- Repairs
+- Annual total
+- Category breakdown
+- Expense history
+- Receipt filename capture
+
 ### Smart reminders
 - Automatic reminders from stored dates
 - Customisable 30 / 14 / 7 / 1 day intervals
@@ -270,6 +281,15 @@ Track:
 - Free-to-paid conversion once subscriptions exist
 
 ## Roadmap
+
+### Phase 4 — Expenses
+- [x] Expense records
+- [x] Annual home cost total
+- [x] Category breakdown
+- [x] Expense history
+- [x] Receipt upload field
+- [ ] Receipt storage in cloud
+- [ ] Charts and long-term cost analysis
 
 ### Phase 2 — Make it genuinely useful
 - [x] Smart reminder intervals

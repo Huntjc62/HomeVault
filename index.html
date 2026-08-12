@@ -133,6 +133,7 @@ textarea{min-height:90px;resize:vertical}
       <button data-page="documents">📄 Documents</button>
       <button data-page="scanner">📸 Scan document</button>
       <button data-page="reminders">🔔 Reminders</button>
+      <button data-page="expenses">💷 Expenses</button>
       <div class="admin-link">
         <button data-page="admin">⚙️ Admin</button>
       </div>
@@ -171,6 +172,7 @@ const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {
 };
 function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}
 state.reminderSettings = state.reminderSettings || {days:[30,14,7,1], email:true, browser:true};
+state.expenses = state.expenses || [];
 function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
 function esc(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 function uid(){return Date.now()+"_"+Math.random().toString(36).slice(2,7)}
@@ -214,6 +216,12 @@ function dashboard(){
         <div class="card stat"><div><div class="stat-number">${state.documents.length}</div><p>Documents</p></div><div class="stat-icon">📄</div></div>
       </div>
     </div>
+    <div class="section"><h2>💷 Home costs this year</h2><div class="grid grid-4">
+      <div class="card hero"><p>Home costs this year</p><div style="font-size:28px;font-weight:850;margin-top:5px">£${expenseYearTotal().toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</div><button class="btn btn-light" style="margin-top:14px" onclick="navigate('expenses')">View expenses</button></div>
+      <div class="card stat"><div><div class="stat-number">£${expenseBreakdown().Home.toLocaleString("en-GB",{minimumFractionDigits:0,maximumFractionDigits:0})}</div><p>🏠 Home</p></div></div>
+      <div class="card stat"><div><div class="stat-number">£${expenseBreakdown().Vehicle.toLocaleString("en-GB",{minimumFractionDigits:0,maximumFractionDigits:0})}</div><p>🚗 Car</p></div></div>
+      <div class="card stat"><div><div class="stat-number">£${expenseBreakdown().Repairs.toLocaleString("en-GB",{minimumFractionDigits:0,maximumFractionDigits:0})}</div><p>🔧 Repairs</p></div></div>
+    </div></div>
     <div class="section"><h2>Upcoming</h2><div class="card">${upcomingHtml()}</div></div>
   `);
 }
@@ -344,6 +352,63 @@ function notificationPreview(title,date){
  return `<div class="card alert"><div class="alert-icon">🔔</div><div><h3>${esc(title)}</h3><p>Your ${esc(title.toLowerCase())} is due in <strong>${d} day${d===1?"":"s"}</strong>.</p><p style="margin-top:5px;font-size:12px">HomeVault reminder</p></div></div>`;
 }
 
+
+function expenseYearTotal(){
+ const year=new Date().getFullYear();
+ return state.expenses.filter(e=>e.date && new Date(e.date+"T00:00:00").getFullYear()===year)
+   .reduce((sum,e)=>sum+Number(e.amount||0),0);
+}
+function expenseBreakdown(){
+ const year=new Date().getFullYear();
+ const rows=state.expenses.filter(e=>e.date && new Date(e.date+"T00:00:00").getFullYear()===year);
+ const groups={Home:0,Vehicle:0,Repairs:0,Appliances:0,Boiler:0,Other:0};
+ rows.forEach(e=>{const c=e.category||"Other";groups[c]=(groups[c]||0)+Number(e.amount||0);});
+ return groups;
+}
+function expenseCategoryLabel(c){
+ return ({Home:"🏠 Home",Vehicle:"🚗 Car",Repairs:"🔧 Repairs",Appliances:"🧊 Appliances",Boiler:"🔥 Boiler",Other:"📦 Other"}[c]||c);
+}
+function expensesPage(){
+ const year=new Date().getFullYear();
+ const total=expenseYearTotal();
+ const b=expenseBreakdown();
+ const rows=state.expenses.filter(e=>e.date && new Date(e.date+"T00:00:00").getFullYear()===year).sort((a,b)=>b.date.localeCompare(a.date));
+ const categories=["Home","Vehicle","Repairs","Appliances","Boiler","Other"];
+ layoutPage("Expenses","Build a financial picture of what your home costs.",`
+ <div class="page-head"><div><h2>💷 Home costs ${year}</h2><p>Track servicing, repairs, insurance, tax, replacements and other household costs.</p></div><button class="btn btn-primary" onclick="openExpenseForm()">＋ Add expense</button></div>
+ <div class="card hero">
+   <p>Home costs this year</p>
+   <div style="font-size:42px;font-weight:850;margin-top:4px">£${total.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+   <p style="margin-top:7px">Across ${rows.length} recorded expense${rows.length===1?"":"s"}.</p>
+ </div>
+ <div class="section"><h2>Breakdown</h2><div class="grid grid-3">
+   ${categories.map(c=>`<div class="card stat"><div><div class="stat-number">£${(b[c]||0).toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</div><p>${expenseCategoryLabel(c)}</p></div><div class="stat-icon">${c==="Home"?"🏠":c==="Vehicle"?"🚗":c==="Repairs"?"🔧":c==="Appliances"?"🧊":c==="Boiler"?"🔥":"📦"}</div></div>`).join("")}
+ </div></div>
+ <div class="section"><div class="page-head"><div><h2>Expense history</h2><p>Every recorded cost for ${year}.</p></div></div><div class="card">
+ ${rows.length?`<table><thead><tr><th>Date</th><th>Expense</th><th>Category</th><th>Related record</th><th>Cost</th></tr></thead><tbody>${rows.map(e=>`<tr><td>${formatDate(e.date)}</td><td><strong>${esc(e.title)}</strong>${e.notes?`<br><span style="font-size:12px;color:var(--muted)">${esc(e.notes)}</span>`:""}</td><td>${expenseCategoryLabel(e.category)}</td><td>${esc(e.related||"—")}</td><td><strong>£${Number(e.amount||0).toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></td></tr>`).join("")}</tbody></table>`:`<div class="empty"><div style="font-size:45px">💷</div><h3>No expenses recorded</h3><p>Add your first home, vehicle, boiler or appliance cost.</p></div>`}
+ </div></div>
+ <div class="section card"><h2>💡 Why track expenses?</h2><p>Over time, HomeVault can show the true cost of owning or renting a home, highlight expensive assets and help users plan for upcoming replacements and repairs.</p></div>
+ `);
+}
+function openExpenseForm(){
+ openModal("Add expense",`<form onsubmit="saveExpense(event)"><div class="form-grid">
+  <div class="field"><label>Expense</label><input name="title" placeholder="Boiler service" required></div>
+  <div class="field"><label>Amount (£)</label><input type="number" step="0.01" min="0" name="amount" placeholder="95" required></div>
+  <div class="field"><label>Date</label><input type="date" name="date" value="${new Date().toISOString().slice(0,10)}" required></div>
+  <div class="field"><label>Category</label><select name="category"><option value="Home">Home</option><option value="Vehicle">Car</option><option value="Repairs">Repairs</option><option value="Appliances">Appliances</option><option value="Boiler">Boiler</option><option value="Other">Other</option></select></div>
+  <div class="field"><label>Related record</label><input name="related" placeholder="BMW 3 Series / Boiler / Kitchen"></div>
+  <div class="field"><label>Payment type</label><select name="payment"><option>Card</option><option>Bank transfer</option><option>Cash</option><option>Finance</option><option>Other</option></select></div>
+  <div class="field full"><label>Notes</label><textarea name="notes" placeholder="Optional details"></textarea></div>
+  <div class="field full"><label>Receipt</label><input type="file" name="receipt" accept=".pdf,image/*"></div>
+ </div><div class="actions"><button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary">Save expense</button></div></form>`);
+}
+function saveExpense(e){
+ e.preventDefault();
+ const f=new FormData(e.target),file=e.target.receipt.files[0];
+ state.expenses.unshift({id:uid(),title:f.get("title"),amount:Number(f.get("amount")||0),date:f.get("date"),category:f.get("category"),related:f.get("related"),payment:f.get("payment"),notes:f.get("notes"),receipt:file?.name||""});
+ save();addActivity("Added expense");closeModal();expensesPage();toast("Expense added");
+}
+
 function scannerPage(){
  layoutPage("Document Scanner","Turn a photo of a home document into structured information.",`
  <div class="page-head"><div><h2>📸 Scan a document</h2><p>Upload or photograph a document and preview the information HomeVault could extract.</p></div></div>
@@ -450,11 +515,11 @@ function adminPage(){
 }
 function resetDemo(){if(confirm("Reset all HomeVault demo data?")){localStorage.removeItem(STORAGE_KEY);location.reload()}}
 
-function quickAdd(){openModal("Add record",`<div class="grid grid-2"><button class="btn btn-ghost" onclick="closeModal();navigate('home')">🏠 Home</button><button class="btn btn-ghost" onclick="closeModal();navigate('boiler')">🔥 Boiler</button><button class="btn btn-ghost" onclick="closeModal();navigate('vehicle')">🚗 Vehicle</button><button class="btn btn-ghost" onclick="closeModal();navigate('appliances')">🧊 Appliance</button><button class="btn btn-ghost" onclick="closeModal();navigate('documents')">📄 Document</button><button class="btn btn-ghost" onclick="closeModal();navigate('reminders')">🔔 Reminder</button></div>`)}
+function quickAdd(){openModal("Add record",`<div class="grid grid-2"><button class="btn btn-ghost" onclick="closeModal();navigate('home')">🏠 Home</button><button class="btn btn-ghost" onclick="closeModal();navigate('boiler')">🔥 Boiler</button><button class="btn btn-ghost" onclick="closeModal();navigate('vehicle')">🚗 Vehicle</button><button class="btn btn-ghost" onclick="closeModal();navigate('appliances')">🧊 Appliance</button><button class="btn btn-ghost" onclick="closeModal();navigate('documents')">📄 Document</button><button class="btn btn-ghost" onclick="closeModal();navigate('reminders')">🔔 Reminder</button><button class="btn btn-ghost" onclick="closeModal();navigate('expenses')">💷 Expense</button></div>`)}
 function navigate(page){
  document.querySelectorAll(".nav button[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
  document.getElementById("sidebar").classList.remove("open");
- ({dashboard,home:homePage,boiler:boilerPage,vehicle:vehiclePage,appliances:appliancesPage,documents:documentsPage,scanner:scannerPage,reminders:remindersPage,admin:adminPage}[page]||dashboard)();
+ ({dashboard,home:homePage,boiler:boilerPage,vehicle:vehiclePage,appliances:appliancesPage,documents:documentsPage,scanner:scannerPage,reminders:remindersPage,expenses:expensesPage,admin:adminPage}[page]||dashboard)();
 }
 document.querySelectorAll(".nav button[data-page]").forEach(b=>b.addEventListener("click",()=>navigate(b.dataset.page)));
 document.getElementById("mobileMenu").addEventListener("click",()=>document.getElementById("sidebar").classList.toggle("open"));

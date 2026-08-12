@@ -155,3 +155,30 @@ The current extraction is simulated. Production should add:
 - User confirmation
 - Record matching
 - Secure original-file storage
+
+## Phase 4 — Expenses
+
+The prototype stores expense metadata in `state.expenses`.
+
+Each expense currently contains:
+- id
+- title
+- amount
+- date
+- category
+- related record
+- payment
+- notes
+- receipt filename
+
+Production should store expense records in the database and actual receipts in private cloud storage. Expenses should reference the relevant home/vehicle/boiler/appliance IDs rather than relying on display names.
+
+Future analytics can calculate:
+- annual spend
+- monthly spend
+- spend by asset
+- spend by category
+- repair vs maintenance
+- cost per year
+- total ownership cost
+- replacement cost trends
