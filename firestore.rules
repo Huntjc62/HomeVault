@@ -1,6 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
     function signedIn() {
       return request.auth != null;
     }
@@ -9,31 +10,23 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == userId;
     }
 
-    function isAdminClaim() {
-      return signedIn() && request.auth.token.admin == true;
-    }
-
-    function isAdminProfile() {
-      return signedIn()
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
-    }
-
     function isAdmin() {
-      return isAdminClaim() || isAdminProfile();
+      return signedIn()
+        && (
+          request.auth.token.admin == true
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin"
+        );
     }
 
     match /users/{userId} {
-      // A new user can create only their own profile and cannot self-promote.
-      allow create: if isOwner(userId)
-        && (!("role" in request.resource.data) || request.resource.data.role == "user");
+      allow create: if isOwner(userId);
 
-      // Users can update their own profile, but cannot change role.
-      // Existing admins can manage user profiles.
+      // Users can update their profile, but cannot promote themselves.
+      allow update: if isOwner(userId)
+        && request.resource.data.role == resource.data.role;
+
       allow read: if isOwner(userId) || isAdmin();
-      allow update: if (isOwner(userId)
-        && request.resource.data.role == resource.data.role)
-        || isAdmin();
+
       allow delete: if isAdmin();
 
       match /{collection}/{documentId} {

@@ -136,3 +136,15 @@ Common causes:
 - Automated backups
 - GDPR data export/deletion
 - Subscription/billing
+
+\n## Home creation fix / Firestore permissions
+
+This build supports the admin role stored in `users/{UID}.role` while retaining
+Firebase custom claims as the preferred production mechanism.
+
+After replacing the GitHub files, deploy the updated `firestore.rules` in the
+Firebase Console or Firebase CLI. Then sign out and sign back in to HomeVault.
+
+When saving a home, HomeVault now waits for Firestore to confirm the write before
+closing the form. If Firestore rejects it, the record is rolled back in the page
+and an error is shown in the browser console.
