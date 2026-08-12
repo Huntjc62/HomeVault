@@ -1,11 +1,1 @@
-HomeVault V1 MVP
-
-Copyright (c) 2026
-
-This prototype is provided for development, testing and evaluation.
-
-No warranty is provided. This prototype is not production-ready software.
-
-Before commercial deployment, implement secure authentication, server-side authorisation,
-secure database storage, private file storage, GDPR/privacy controls and appropriate
-security testing.
+HomeVault prototype project. All rights reserved.
