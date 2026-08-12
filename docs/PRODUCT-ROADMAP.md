@@ -5,7 +5,7 @@
 Goal: validate demand.
 
 Core records:
-- Home
+- Home (owned or rented)
 - Boiler
 - Vehicle
 - Appliances
@@ -72,3 +72,41 @@ Potential future records:
 - Contents inventory
 - Pets
 - Important household contacts
+
+## Renter-first expansion ideas
+
+- Tenancy agreement storage
+- Deposit protection tracking
+- Inventory/check-in records
+- Landlord and letting-agent contact log
+- Rent payment tracking
+- Rent increase history
+- Notice and renewal reminders
+- Repair/request log
+- Maintenance issue photos
+- Landlord correspondence history
+- Move-in / move-out checklist
+- Deposit return checklist
+
+## Phase 2 — Make it genuinely useful
+
+- [x] Smart reminder intervals
+- [x] Custom reminder settings
+- [x] Notification preview
+- [ ] Production email delivery
+- [ ] Browser/push notification delivery
+- [ ] Scheduled reminder engine
+- [ ] Notification history
+
+## Phase 3 — Document scanning
+
+- [x] Document scanning UI
+- [x] Photo/camera upload
+- [x] Extraction preview
+- [x] Save extracted document
+- [ ] OCR engine
+- [ ] AI document classification
+- [ ] AI field extraction
+- [ ] Confidence scoring
+- [ ] User confirmation before save
+- [ ] Automatic record matching

@@ -31,6 +31,8 @@ This package is intentionally front-end focused. It can be opened locally or dep
 - Home insurance expiry
 - Notes
 - Property photo
+- Owned or rented status
+- Renter-specific tenancy information
 
 ### Boiler
 - Manufacturer
@@ -74,6 +76,10 @@ This package is intentionally front-end focused. It can be opened locally or dep
 
 ### Documents
 - Home insurance
+- Tenancy agreements
+- Deposit certificates
+- Inventory / check-in reports
+- Landlord correspondence
 - Mortgage
 - Boiler documents
 - Electrical certificates
@@ -85,11 +91,13 @@ This package is intentionally front-end focused. It can be opened locally or dep
 - Manuals
 - Other
 
-### Reminders
+### Smart reminders
 - Automatic reminders from stored dates
+- Customisable 30 / 14 / 7 / 1 day intervals
 - Manual reminders
-- Overdue/upcoming status
 - Dashboard alerts
+- Notification preview
+- Email/browser notification settings ready for production integration
 
 ### Admin
 - Basic user count
@@ -263,6 +271,21 @@ Track:
 
 ## Roadmap
 
+### Phase 2 — Make it genuinely useful
+- [x] Smart reminder intervals
+- [x] Customisable reminder settings
+- [x] Notification preview
+- [x] Email/browser notification preferences
+- [x] Document scanning workflow prototype
+
+### Phase 3 — Document scanning
+- [x] Scan/upload document interface
+- [x] OCR/AI extraction workflow prototype
+- [x] Extracted-field confirmation flow
+- [ ] Connect production OCR
+- [ ] Connect production AI extraction
+- [ ] Automatic record matching
+
 ### V1 — Prototype
 - [x] Dashboard
 - [x] Home
@@ -272,6 +295,8 @@ Track:
 - [x] Documents
 - [x] Reminders
 - [x] Admin prototype
+- [x] Owned/rented home profiles
+- [x] Renter-specific reminders and documents
 - [x] Local data storage
 
 ### V1.1 — User testing

@@ -54,6 +54,19 @@ The localStorage state should eventually map to database tables such as:
 - year_built
 - notes
 - photo_url
+- tenure
+- landlord
+- landlord_contact
+- tenancy_start
+- tenancy_end
+- rent
+- deposit
+- deposit_scheme
+- rent_review
+- gas_safety_expiry
+- eicr_expiry
+- inventory_date
+- notice_period
 
 ### boilers
 - id
@@ -112,3 +125,33 @@ The localStorage state should eventually map to database tables such as:
 - category
 - notification_status
 - created_at
+
+## Phase 2 — Smart reminders
+
+The prototype stores reminder preferences in `state.reminderSettings`.
+
+Current supported intervals:
+- 30 days
+- 14 days
+- 7 days
+- 1 day
+
+For production, reminders should be evaluated server-side using a scheduled job/queue. Email should be sent through a transactional email provider and browser/push notifications should use an appropriate notification service.
+
+## Phase 3 — Document scanning
+
+The current scanner demonstrates the user journey:
+
+1. Capture/upload a document.
+2. Extract structured fields.
+3. Review the extracted information.
+4. Save it to HomeVault.
+
+The current extraction is simulated. Production should add:
+- OCR
+- Document classification
+- Structured extraction
+- Confidence scores
+- User confirmation
+- Record matching
+- Secure original-file storage

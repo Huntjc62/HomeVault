@@ -85,6 +85,13 @@ textarea{min-height:90px;resize:vertical}
 .login-error{background:#fff0ee;color:var(--danger);padding:10px;border-radius:9px;margin-top:14px;font-size:13px}
 .admin-stat{padding:18px;border-radius:15px;background:#f6f8f7}
 .toast{position:fixed;right:20px;bottom:20px;background:#102b22;color:#fff;padding:13px 17px;border-radius:12px;box-shadow:var(--shadow);display:none;z-index:100}
+.reminder-option{border:1px solid var(--border);border-radius:14px;padding:15px;background:#fbfcfb}
+.reminder-option label{display:flex;align-items:center;gap:10px}
+.reminder-option input[type="checkbox"]{width:18px;height:18px;accent-color:var(--primary)}
+.scan-preview{border:2px dashed #cfdad5;border-radius:16px;padding:28px;text-align:center;background:#f8fbf9}
+.extracted{background:#edf6f1;border-radius:14px;padding:16px}
+.notice{padding:12px 14px;border-radius:11px;background:#fff7e8;color:#77501c;font-size:13px}
+
 .toast.show{display:block}
 @media(max-width:950px){
   .sidebar{width:205px}.main{margin-left:205px;width:calc(100% - 205px);padding:20px}
@@ -124,6 +131,7 @@ textarea{min-height:90px;resize:vertical}
       <button data-page="vehicle">🚗 Vehicle</button>
       <button data-page="appliances">🧊 Appliances</button>
       <button data-page="documents">📄 Documents</button>
+      <button data-page="scanner">📸 Scan document</button>
       <button data-page="reminders">🔔 Reminders</button>
       <div class="admin-link">
         <button data-page="admin">⚙️ Admin</button>
@@ -158,9 +166,11 @@ const STORAGE_KEY = "homevault_mvp_v1";
 const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {
   homes: [], boilers: [], vehicles: [], appliances: [], documents: [], reminders: [],
   users: [{username:"admin", role:"Admin"}],
-  activity: []
+  activity: [],
+  reminderSettings: {days:[30,14,7,1], email:true, browser:true}
 };
 function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}
+state.reminderSettings = state.reminderSettings || {days:[30,14,7,1], email:true, browser:true};
 function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
 function esc(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 function uid(){return Date.now()+"_"+Math.random().toString(36).slice(2,7)}
@@ -299,6 +309,96 @@ function documentsPage(){
 function openDocumentForm(){openModal("Add document",`<form onsubmit="saveDocument(event)"><div class="form-grid"><div class="field"><label>Document name</label><input name="name" placeholder="Boiler warranty" required></div><div class="field"><label>Category</label><select name="category"><option>Home insurance</option><option>Mortgage</option><option>Boiler</option><option>Electrical certificate</option><option>Gas certificate</option><option>EPC</option><option>Property document</option><option>Receipt</option><option>Warranty</option><option>Manual</option><option>Other</option></select></div><div class="field"><label>Date</label><input type="date" name="date"></div><div class="field"><label>Related record</label><select name="related"><option>Home</option><option>Boiler</option><option>Vehicle</option><option>Appliance</option></select></div><div class="field full"><label>Upload file</label><input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"></div></div><div class="actions"><button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary">Save document</button></div></form>`)}
 function saveDocument(e){e.preventDefault();const f=new FormData(e.target),file=e.target.file.files[0];state.documents.unshift({id:uid(),name:f.get("name"),category:f.get("category"),date:f.get("date"),related:f.get("related"),fileName:file?.name||""});save();addActivity("Added document");closeModal();documentsPage();toast("Document added")}
 
+function reminderIntervalsHtml(){
+ const selected=state.reminderSettings.days||[30,14,7,1];
+ return [30,14,7,1].map(d=>`<div class="reminder-option"><label><input type="checkbox" name="days" value="${d}" ${selected.includes(d)?"checked":""}> ${d} day${d===1?"":"s"} before</label></div>`).join("");
+}
+function openReminderSettings(){
+ openModal("Smart reminder settings",`<form onsubmit="saveReminderSettings(event)">
+ <p>Choose when HomeVault should alert you before an important date.</p>
+ <div class="grid grid-2" style="margin-top:18px">${reminderIntervalsHtml()}</div>
+ <div class="grid grid-2" style="margin-top:15px">
+  <div class="reminder-option"><label><input type="checkbox" name="email" ${state.reminderSettings.email?"checked":""}> Email reminders</label><p style="margin-top:7px">Production V2 will send these through an email provider.</p></div>
+  <div class="reminder-option"><label><input type="checkbox" name="browser" ${state.reminderSettings.browser?"checked":""}> Browser notifications</label><p style="margin-top:7px">Use browser notifications when supported.</p></div>
+ </div>
+ <div class="actions"><button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary">Save settings</button></div>
+ </form>`);
+}
+function saveReminderSettings(e){
+ e.preventDefault();const f=new FormData(e.target);
+ state.reminderSettings={days:f.getAll("days").map(Number),email:e.target.email.checked,browser:e.target.browser.checked};
+ save();addActivity("Updated smart reminder settings");closeModal();remindersPage();toast("Reminder settings saved");
+}
+function getReminderMatches(date){
+ const d=daysUntil(date); if(d===null)return [];
+ return (state.reminderSettings.days||[30,14,7,1]).filter(x=>d===x);
+}
+function reminderMessage(title,date){
+ const matches=getReminderMatches(date); if(!matches.length)return "";
+ const d=matches[0]; return `🔔 ${title} is due in ${d} day${d===1?"":"s"}.`;
+}
+function notificationPreview(title,date){
+ const matches=getReminderMatches(date);
+ if(!matches.length)return "";
+ const d=matches[0];
+ return `<div class="card alert"><div class="alert-icon">🔔</div><div><h3>${esc(title)}</h3><p>Your ${esc(title.toLowerCase())} is due in <strong>${d} day${d===1?"":"s"}</strong>.</p><p style="margin-top:5px;font-size:12px">HomeVault reminder</p></div></div>`;
+}
+
+function scannerPage(){
+ layoutPage("Document Scanner","Turn a photo of a home document into structured information.",`
+ <div class="page-head"><div><h2>📸 Scan a document</h2><p>Upload or photograph a document and preview the information HomeVault could extract.</p></div></div>
+ <div class="grid grid-2">
+  <div class="card">
+   <h2>1. Capture document</h2>
+   <div class="scan-preview" style="margin-top:15px">
+    <div style="font-size:48px">📷</div>
+    <h3>Upload a photo or PDF</h3>
+    <p>On a phone, this can use the camera. In this prototype, extraction is simulated.</p>
+    <input id="scanFile" type="file" accept="image/*,.pdf" capture="environment" style="margin-top:15px;width:100%">
+   </div>
+   <div id="scanFileInfo" style="margin-top:12px"></div>
+  </div>
+  <div class="card">
+   <h2>2. Extract information</h2>
+   <p>V1.1 demonstrates the workflow. Production Phase 3 can connect OCR/AI to extract real fields.</p>
+   <div id="scanResult" style="margin-top:15px">
+    <div class="empty"><div style="font-size:42px">✨</div><h3>Nothing scanned yet</h3><p>Choose a document to begin.</p></div>
+   </div>
+  </div>
+ </div>
+ <div class="section card"><h2>What Phase 3 will recognise</h2><div class="grid grid-3" style="margin-top:15px">
+  <div class="reminder-option">📅 <strong>Dates</strong><p>Installation, purchase, expiry and service dates.</p></div>
+  <div class="reminder-option">🏷️ <strong>Manufacturers</strong><p>Brand and model information.</p></div>
+  <div class="reminder-option">🔢 <strong>Serial numbers</strong><p>Serial and reference numbers.</p></div>
+  <div class="reminder-option">🛡️ <strong>Warranties</strong><p>Warranty periods and expiry dates.</p></div>
+  <div class="reminder-option">📄 <strong>Document type</strong><p>Certificates, receipts, warranties and manuals.</p></div>
+  <div class="reminder-option">💷 <strong>Costs</strong><p>Purchase and service costs where visible.</p></div>
+ </div></div>
+ `);
+ const input=document.getElementById("scanFile");
+ input.addEventListener("change",()=>{
+  const file=input.files[0]; if(!file)return;
+  document.getElementById("scanFileInfo").innerHTML=`<div class="tag">📎 ${esc(file.name)}</div>`;
+  const lower=file.name.toLowerCase();
+  let demo={type:"Warranty certificate",manufacturer:"Worcester Bosch",model:"Greenstar 30i",serial:"GB30I-DEMO-12345",warranty:"10 years",expiry:"12/06/2032"};
+  if(lower.includes("mot")) demo={type:"MOT certificate",manufacturer:"BMW",model:"3 Series",serial:"AB12CDE",warranty:"—",expiry:"12/09/2026"};
+  document.getElementById("scanResult").innerHTML=`<div class="extracted"><div class="tag">✨ AI/OCR preview</div><div class="grid grid-2" style="margin-top:15px">
+   <div><p>Document type</p><strong>${esc(demo.type)}</strong></div>
+   <div><p>Manufacturer</p><strong>${esc(demo.manufacturer)}</strong></div>
+   <div><p>Model</p><strong>${esc(demo.model)}</strong></div>
+   <div><p>Serial number</p><strong>${esc(demo.serial)}</strong></div>
+   <div><p>Warranty</p><strong>${esc(demo.warranty)}</strong></div>
+   <div><p>Expiry</p><strong>${esc(demo.expiry)}</strong></div>
+  </div><div class="notice" style="margin-top:15px">This is a prototype extraction preview. A production Phase 3 implementation should use OCR plus structured AI extraction and require the user to confirm the fields before saving.</div>
+  <button class="btn btn-primary" style="margin-top:15px" onclick='saveScannedDocument(${JSON.stringify(demo).replace(/</g,"\\\\u003c")},${JSON.stringify(file.name).replace(/</g,"\\\\u003c")})'>Save to HomeVault</button>
+ </div>`;
+ });
+}
+function saveScannedDocument(data,fileName){
+ state.documents.unshift({id:uid(),name:data.type+" — "+data.manufacturer,category:data.type,date:"",related:"Home",fileName:fileName,extracted:data});
+ save();addActivity("Saved scanned document");toast("Document saved to HomeVault");navigate("documents");
+}
+
 function remindersPage(){
  const items=[];
  state.reminders.forEach(r=>items.push(r));
@@ -308,12 +408,28 @@ function remindersPage(){
  if(v?.insuranceExpiry)items.push({title:"Vehicle insurance",date:v.insuranceExpiry,icon:"🛡️",source:"Vehicle"});
  if(v?.taxRenewal)items.push({title:"Vehicle tax renewal",date:v.taxRenewal,icon:"🚗",source:"Vehicle"});
  if(v?.serviceDue)items.push({title:"Vehicle service",date:v.serviceDue,icon:"🔧",source:"Vehicle"});
- if(h?.insuranceExpiry)items.push({title:"Home insurance",date:h.insuranceExpiry,icon:"🏠",source:"Home"});
+ if(h?.insuranceExpiry && h.tenure!=="Rented")items.push({title:"Home insurance",date:h.insuranceExpiry,icon:"🏠",source:"Home"});
+ if(h?.tenure==="Rented"){
+  if(h.tenancyEnd)items.push({title:"Tenancy renewal",date:h.tenancyEnd,icon:"🔑",source:"Rented home"});
+  if(h.rentReview)items.push({title:"Rent review",date:h.rentReview,icon:"💷",source:"Rented home"});
+  if(h.gasSafetyExpiry)items.push({title:"Gas safety",date:h.gasSafetyExpiry,icon:"🔥",source:"Rented home"});
+  if(h.eicrExpiry)items.push({title:"EICR review",date:h.eicrExpiry,icon:"⚡",source:"Rented home"});
+ }
  items.sort((a,b)=>a.date.localeCompare(b.date));
- layoutPage("Reminders","The things HomeVault should help you remember.",`
- <div class="page-head"><div><h2>🔔 Reminder centre</h2><p>Important dates collected from your records.</p></div><button class="btn btn-primary" onclick="openReminderForm()">＋ Add reminder</button></div>
- <div class="card">${items.length?`<table><thead><tr><th>Reminder</th><th>Date</th><th>Source</th><th>Status</th></tr></thead><tbody>${items.map(r=>`<tr><td>${r.icon||"🔔"} <strong>${esc(r.title)}</strong></td><td>${formatDate(r.date)}</td><td>${esc(r.source||"Manual")}</td><td>${statusDays(daysUntil(r.date))}</td></tr>`).join("")}</tbody></table>`:`<div class="empty"><h3>No reminders</h3><p>Add important dates and HomeVault will surface them here.</p></div>`}</div>`);
+ const dueNow=items.filter(x=>getReminderMatches(x.date).length);
+ const preview=dueNow.slice(0,4).map(x=>notificationPreview(x.title,x.date)).join("");
+ layoutPage("Reminders","Smart reminders help HomeVault tell you before something is due.",`
+ <div class="page-head"><div><h2>🔔 Smart reminder centre</h2><p>HomeVault can prepare alerts at ${esc((state.reminderSettings.days||[]).join(", "))} days before an important date.</p></div><div style="display:flex;gap:9px;flex-wrap:wrap"><button class="btn btn-ghost" onclick="openReminderSettings()">⚙️ Reminder settings</button><button class="btn btn-primary" onclick="openReminderForm()">＋ Add reminder</button></div></div>
+ <div class="grid grid-3">
+  <div class="card stat"><div><div class="stat-number">${items.length}</div><p>Tracked dates</p></div><div class="stat-icon">📅</div></div>
+  <div class="card stat"><div><div class="stat-number">${dueNow.length}</div><p>Matching today</p></div><div class="stat-icon">🔔</div></div>
+  <div class="card stat"><div><div class="stat-number">${(state.reminderSettings.days||[]).length}</div><p>Reminder intervals</p></div><div class="stat-icon">⏰</div></div>
+ </div>
+ <div class="section"><h2>Notification preview</h2>${preview||`<div class="card"><p>No reminder is currently at one of your selected intervals. HomeVault will surface it here when the date matches.</p></div>`}</div>
+ <div class="section"><div class="card"><h2>How smart reminders work</h2><div class="grid grid-4" style="margin-top:15px">${(state.reminderSettings.days||[]).map(d=>`<div class="reminder-option"><strong>${d} day${d===1?"":"s"} before</strong><p style="margin-top:5px">Alert and email preparation point.</p></div>`).join("")}</div><div class="notice" style="margin-top:15px">Email delivery is represented in this V1 prototype. A production release will connect this to a secure email/notification service.</div></div></div>
+ <div class="section"><div class="card">${items.length?`<table><thead><tr><th>Reminder</th><th>Date</th><th>Source</th><th>Status</th><th>Alert</th></tr></thead><tbody>${items.map(r=>`<tr><td>${r.icon||"🔔"} <strong>${esc(r.title)}</strong></td><td>${formatDate(r.date)}</td><td>${esc(r.source||"Manual")}</td><td>${statusDays(daysUntil(r.date))}</td><td>${getReminderMatches(r.date).length?`🔔 ${getReminderMatches(r.date)[0]} day alert`:"—"}</td></tr>`).join("")}</tbody></table>`:`<div class="empty"><h3>No reminders</h3><p>Add important dates and HomeVault will surface them here.</p></div>`}</div></div>`);
 }
+
 function openReminderForm(){openModal("Add reminder",`<form onsubmit="saveReminder(event)"><div class="form-grid"><div class="field"><label>Reminder</label><input name="title" placeholder="Home insurance renewal" required></div><div class="field"><label>Date</label><input type="date" name="date" required></div><div class="field"><label>Category</label><select name="source"><option>Home</option><option>Boiler</option><option>Vehicle</option><option>Appliance</option><option>Other</option></select></div></div><div class="actions"><button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary">Save reminder</button></div></form>`)}
 function saveReminder(e){e.preventDefault();const f=new FormData(e.target);state.reminders.push({id:uid(),title:f.get("title"),date:f.get("date"),source:f.get("source"),icon:"🔔"});save();addActivity("Added reminder");closeModal();remindersPage();toast("Reminder added")}
 
@@ -338,7 +454,7 @@ function quickAdd(){openModal("Add record",`<div class="grid grid-2"><button cla
 function navigate(page){
  document.querySelectorAll(".nav button[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
  document.getElementById("sidebar").classList.remove("open");
- ({dashboard,home:homePage,boiler:boilerPage,vehicle:vehiclePage,appliances:appliancesPage,documents:documentsPage,reminders:remindersPage,admin:adminPage}[page]||dashboard)();
+ ({dashboard,home:homePage,boiler:boilerPage,vehicle:vehiclePage,appliances:appliancesPage,documents:documentsPage,scanner:scannerPage,reminders:remindersPage,admin:adminPage}[page]||dashboard)();
 }
 document.querySelectorAll(".nav button[data-page]").forEach(b=>b.addEventListener("click",()=>navigate(b.dataset.page)));
 document.getElementById("mobileMenu").addEventListener("click",()=>document.getElementById("sidebar").classList.toggle("open"));

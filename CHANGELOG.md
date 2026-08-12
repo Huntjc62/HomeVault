@@ -17,3 +17,25 @@
 - Added browser localStorage persistence.
 - Added responsive mobile layout.
 - Added quick-add record flow.
+
+## V1.0.1 — Renter support
+
+- Added Owned/Rented property status.
+- Added tenancy dates and renewal tracking.
+- Added landlord/agent details.
+- Added rent and deposit information.
+- Added deposit scheme field.
+- Added gas safety and EICR reminder fields.
+- Added inventory/check-in date and notice period.
+- Added renter-specific dashboard alerts and upcoming items.
+- Added renter-focused document categories.
+
+## Phase 2 / Phase 3 prototype update
+
+- Added customisable 30/14/7/1-day smart reminder intervals.
+- Added reminder notification previews.
+- Added email and browser notification preferences for future production integration.
+- Added Document Scanner section.
+- Added mobile-friendly camera/file upload workflow.
+- Added prototype OCR/AI extraction preview.
+- Added Save to HomeVault flow for extracted document data.
