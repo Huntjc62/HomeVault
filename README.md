@@ -77,3 +77,8 @@ For production, move the app to an npm/Vite build and use the modular Firebase S
 HomeVault V4 is a Firebase-backed GitHub Pages application. Authentication uses Firebase Auth, records use Cloud Firestore, and document files use Firebase Storage. The app no longer depends on browser localStorage for its core records.
 
 For the account you manually created in Firebase, set the Firestore profile `role` to `admin` to enable the Admin area in this build.
+
+
+## Expense page display update
+- Removed the All Expenses table from the main Expenses page.
+- Changed the recurring-cost comparison column from Monthly equivalent to Yearly equivalent.

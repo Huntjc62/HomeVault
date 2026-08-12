@@ -14,3 +14,7 @@
 ## Firebase configuration connected
 - Wired the supplied HomeVault Firebase web configuration into `assets/firebase-config.js`.
 - Added modular SDK reference for the future npm/Vite production build.
+
+## Expense page tidy-up
+- Removed the All Expenses section from the main Expenses page.
+- Changed the monthly/yearly comparison column to Yearly equivalent.
