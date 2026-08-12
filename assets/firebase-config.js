@@ -1,11 +1,16 @@
-// HomeVault Firebase configuration.
-// Replace the placeholder values using Firebase Console -> Project settings -> Your apps.
-// Do not put Firebase Admin SDK/service-account credentials in this file.
+// HomeVault Firebase configuration
+// Firebase Web configuration supplied for the HomeVault project.
+//
+// IMPORTANT:
+// This web config is safe to include in a browser app. It identifies the
+// Firebase project; Firestore/Storage Security Rules and Authentication
+// control access. Never put a Firebase Admin SDK service-account key here.
+
 window.HOMEVAULT_FIREBASE_CONFIG = {
-  apiKey: "REPLACE_ME",
-  authDomain: "REPLACE_ME.firebaseapp.com",
-  projectId: "REPLACE_ME",
-  storageBucket: "REPLACE_ME.firebasestorage.app",
-  messagingSenderId: "REPLACE_ME",
-  appId: "REPLACE_ME"
+  apiKey: "AIzaSyDsLGfuSxoQp1AJpfgelFtgrexlaQ__Evw",
+  authDomain: "homevault-40559.firebaseapp.com",
+  projectId: "homevault-40559",
+  storageBucket: "homevault-40559.firebasestorage.app",
+  messagingSenderId: "113599821955",
+  appId: "1:113599821955:web:41a4b81594e47be42943b6"
 };

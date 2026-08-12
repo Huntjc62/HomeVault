@@ -60,3 +60,13 @@ Never commit a Firebase Admin service-account JSON file.
 - Firestore Security Rules: https://firebase.google.com/docs/firestore/security
 - Storage Security Rules: https://firebase.google.com/docs/storage/security
 - Custom claims: https://firebase.google.com/docs/auth/admin/custom-claims
+
+
+## Firebase project
+
+This package is preconfigured for the supplied Firebase project `homevault-40559`.
+Before using authentication/database features, enable Email/Password Authentication,
+create Firestore, create Storage, and deploy the included `firestore.rules` and
+`storage.rules`.
+
+For production, move the app to an npm/Vite build and use the modular Firebase SDK.

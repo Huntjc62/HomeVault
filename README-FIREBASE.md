@@ -170,3 +170,18 @@ Next backend steps:
 8. Cloud Functions for reminders/email
 9. Subscription/billing
 10. Automated backups/export
+
+
+## HomeVault Firebase project configuration
+
+The package is already configured for the supplied Firebase web app:
+
+- Project ID: `homevault-40559`
+- Auth domain: `homevault-40559.firebaseapp.com`
+- Storage bucket: `homevault-40559.firebasestorage.app`
+
+The values are in `assets/firebase-config.js`.
+
+The browser Firebase configuration is not a secret credential. Do not put Firebase Admin SDK service-account JSON, private keys, or other server credentials into the web app. Protect the application with Authentication plus Firestore/Storage Security Rules.
+
+The supplied Firebase project config has been wired into the current static prototype. The app currently uses Firebase's browser compat SDK for minimal changes to the existing page code. `assets/firebase-modular-reference.js` shows the equivalent modular `initializeApp()` pattern for the later npm/Vite production build.
