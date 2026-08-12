@@ -104,6 +104,9 @@ This package is intentionally front-end focused. It can be opened locally or dep
 - Boiler costs
 - Appliance costs
 - Repairs
+- Home monthly cost
+- Personal monthly cost
+- Combined monthly cost
 - Estimated annual total
 - Regular monthly cost calculation
 - Current-month one-off spend

@@ -222,3 +222,16 @@ A production database should also support:
 - payment provider/account reference where appropriate
 - linked home/asset ID
 - receipt storage ID
+
+## Personal expense model
+
+Expenses now contain a `scope`:
+- `Home`
+- `Personal`
+
+The monthly dashboard calculates:
+- Home monthly cost = recurring Home costs + current-month Home one-offs
+- Personal monthly cost = recurring Personal costs + current-month Personal one-offs
+- Combined monthly cost = Home monthly cost + Personal monthly cost
+
+Production should allow custom personal categories and optionally support budgets, spending limits, bank transaction imports and account-specific privacy controls.

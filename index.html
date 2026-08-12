@@ -367,22 +367,33 @@ function expenseYearTotal(){
    return sum;
  },0);
 }
-function recurringMonthlyTotal(){
+function expenseScope(e){ return e.scope==="Personal" ? "Personal" : "Home"; }
+function recurringMonthlyTotal(scope){
  return state.expenses.reduce((sum,e)=>{
+   if(scope && expenseScope(e)!==scope)return sum;
    if(e.frequency==="Monthly") return sum+Number(e.amount||0);
    if(e.frequency==="Yearly") return sum+Number(e.amount||0)/12;
    return sum;
  },0);
 }
-function currentMonthActualTotal(){
+function currentMonthActualTotal(scope){
  const now=new Date(),year=now.getFullYear(),month=now.getMonth();
- return state.expenses.filter(e=>e.frequency==="One-off" && e.date).reduce((sum,e)=>{
+ return state.expenses.filter(e=>expenseScope(e)===(scope||expenseScope(e)) && e.frequency==="One-off" && e.date).reduce((sum,e)=>{
    const d=new Date(e.date+"T00:00:00");
    return d.getFullYear()===year && d.getMonth()===month ? sum+Number(e.amount||0) : sum;
  },0);
 }
-function projectedMonthTotal(){
- return recurringMonthlyTotal()+currentMonthActualTotal();
+function projectedMonthTotal(scope){
+ return recurringMonthlyTotal(scope)+currentMonthActualTotal(scope);
+}
+function homeMonthlyCost(){
+ return projectedMonthTotal("Home");
+}
+function personalMonthlyCost(){
+ return projectedMonthTotal("Personal");
+}
+function combinedMonthlyCost(){
+ return homeMonthlyCost()+personalMonthlyCost();
 }
 function expenseBreakdown(){
  const groups={Home:0,Vehicle:0,Repairs:0,Appliances:0,Boiler:0,Other:0};
@@ -409,6 +420,7 @@ function openEditExpenseForm(id){
  if(!e)return;
  openModal("Edit expense",`<form onsubmit="updateExpense(event,'${esc(id)}')"><div class="form-grid">
   <div class="field"><label>Expense</label><input name="title" value="${esc(e.title)}" required></div>
+  <div class="field"><label>Expense type</label><select name="scope"><option value="Home" ${expenseScope(e)==="Home"?"selected":""}>🏠 Home expense</option><option value="Personal" ${expenseScope(e)==="Personal"?"selected":""}>👤 Personal expense</option></select></div>
   <div class="field"><label>Amount (£)</label><input type="number" step="0.01" min="0" name="amount" value="${esc(e.amount)}" required></div>
   <div class="field"><label>Frequency</label><select name="frequency" onchange="toggleExpenseDateLabel(this.value)">
    <option value="One-off" ${e.frequency==="One-off"?"selected":""}>One-off</option>
@@ -423,6 +435,13 @@ function openEditExpenseForm(id){
    <option value="Appliances" ${e.category==="Appliances"?"selected":""}>Appliances</option>
    <option value="Boiler" ${e.category==="Boiler"?"selected":""}>Boiler</option>
    <option value="Other" ${e.category==="Other"?"selected":""}>Other</option>
+   <option value="Groceries" ${e.category==="Groceries"?"selected":""}>Groceries</option>
+   <option value="Transport" ${e.category==="Transport"?"selected":""}>Transport</option>
+   <option value="Entertainment" ${e.category==="Entertainment"?"selected":""}>Entertainment</option>
+   <option value="Shopping" ${e.category==="Shopping"?"selected":""}>Shopping</option>
+   <option value="Health" ${e.category==="Health"?"selected":""}>Health</option>
+   <option value="Subscriptions" ${e.category==="Subscriptions"?"selected":""}>Subscriptions</option>
+   <option value="Personal" ${e.category==="Personal"?"selected":""}>Personal</option>
   </select></div>
   <div class="field"><label>Payment method</label><select name="payment">
    ${["Direct Debit","Card","Bank transfer","Cash","Finance","Other"].map(x=>`<option ${e.payment===x?"selected":""}>${x}</option>`).join("")}
@@ -446,6 +465,7 @@ function updateExpense(event,id){
    ...state.expenses[index],
    title:f.get("title"),
    amount:Number(f.get("amount")||0),
+   scope:f.get("scope")||"Home",
    frequency:f.get("frequency"),
    date:f.get("date"),
    category:f.get("category"),
@@ -469,6 +489,9 @@ function expensesPage(){
  const total=expenseYearTotal();
  const monthly=recurringMonthlyTotal();
  const projected=projectedMonthTotal();
+ const homeMonthly=homeMonthlyCost();
+ const personalMonthly=personalMonthlyCost();
+ const combinedMonthly=combinedMonthlyCost();
  const b=expenseBreakdown();
  const rows=state.expenses.slice().sort((a,b)=>{
    if(a.frequency!=="One-off" && b.frequency==="One-off")return -1;
@@ -479,54 +502,67 @@ function expensesPage(){
  const monthNames=["January","February","March","April","May","June","July","August","September","October","November","December"];
  const now=new Date();
  const monthlyActual=currentMonthActualTotal();
- layoutPage("Expenses","See what your home costs every month and across the year.",`
- <div class="page-head"><div><h2>💷 Home costs</h2><p>Track one-off purchases as well as recurring monthly and yearly costs.</p></div><button class="btn btn-primary" onclick="openExpenseForm()">＋ Add expense</button></div>
+ const personalRows=state.expenses.filter(e=>expenseScope(e)==="Personal");
+ const homeRows=state.expenses.filter(e=>expenseScope(e)==="Home");
+ layoutPage("Expenses","Track what your home costs, what you spend personally, and the combined monthly picture.",`
+ <div class="page-head"><div><h2>💷 Expenses & monthly costs</h2><p>Separate household costs from personal spending while keeping everything in one financial picture.</p></div><button class="btn btn-primary" onclick="openExpenseForm()">＋ Add expense</button></div>
 
- <div class="grid grid-4">
-   <div class="card hero"><p>Estimated yearly cost</p><div style="font-size:30px;font-weight:850;margin-top:5px">£${total.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</div><p style="margin-top:5px">Recurring costs + one-off costs</p></div>
-   <div class="card stat"><div><div class="stat-number">£${monthly.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</div><p>Regular monthly cost</p></div><div class="stat-icon">📅</div></div>
-   <div class="card stat"><div><div class="stat-number">£${projected.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</div><p>${monthNames[now.getMonth()]} projected</p></div><div class="stat-icon">💷</div></div>
-   <div class="card stat"><div><div class="stat-number">£${monthlyActual.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</div><p>${monthNames[now.getMonth()]} one-offs</p></div><div class="stat-icon">🧾</div></div>
+ <div class="grid grid-3">
+   <div class="card hero"><p>🏠 Home monthly cost</p><div style="font-size:30px;font-weight:850;margin-top:5px">£${homeMonthly.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</div><p style="margin-top:5px">Home, vehicle, repairs & household costs</p></div>
+   <div class="card hero"><p>👤 Personal monthly cost</p><div style="font-size:30px;font-weight:850;margin-top:5px">£${personalMonthly.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</div><p style="margin-top:5px">Personal spending and commitments</p></div>
+   <div class="card hero"><p>💷 Combined monthly cost</p><div style="font-size:30px;font-weight:850;margin-top:5px">£${combinedMonthly.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</div><p style="margin-top:5px">Your overall monthly picture</p></div>
  </div>
+
+ <div class="section"><div class="card">
+   <h2>📊 Your monthly financial picture</h2>
+   <div style="margin-top:18px">
+     <div style="display:flex;justify-content:space-between;margin-bottom:7px"><span>🏠 Home</span><strong>£${homeMonthly.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div>
+     <div style="height:12px;background:#e8eeeb;border-radius:99px;overflow:hidden"><div style="height:100%;width:${combinedMonthly?Math.min(100,homeMonthly/combinedMonthly*100):0}%;background:var(--primary);border-radius:99px"></div></div>
+     <div style="display:flex;justify-content:space-between;margin:18px 0 7px"><span>👤 Personal</span><strong>£${personalMonthly.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div>
+     <div style="height:12px;background:#e8eeeb;border-radius:99px;overflow:hidden"><div style="height:100%;width:${combinedMonthly?Math.min(100,personalMonthly/combinedMonthly*100):0}%;background:#b9c9c2;border-radius:99px"></div></div>
+     <div style="display:flex;justify-content:space-between;margin-top:18px;padding-top:16px;border-top:1px solid var(--border)"><strong>Combined</strong><strong>£${combinedMonthly.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})} / month</strong></div>
+   </div>
+ </div></div>
 
  <div class="section"><h2>Monthly & yearly commitments</h2><div class="card">
    ${state.expenses.filter(e=>e.frequency==="Monthly"||e.frequency==="Yearly").length?`
-   <table><thead><tr><th>Cost</th><th>Amount</th><th>Frequency</th><th>Monthly equivalent</th><th>Payment</th><th>Annual cost</th><th>Actions</th></tr></thead><tbody>
+   <table><thead><tr><th>Cost</th><th>Type</th><th>Amount</th><th>Frequency</th><th>Monthly equivalent</th><th>Payment</th><th>Actions</th></tr></thead><tbody>
    ${state.expenses.filter(e=>e.frequency==="Monthly"||e.frequency==="Yearly").map(e=>{
       const amount=Number(e.amount||0), annual=e.frequency==="Monthly"?amount*12:amount, monthlyEq=annual/12;
-      return `<tr><td><strong>${esc(e.title)}</strong><br><span style="font-size:12px;color:var(--muted)">${expenseCategoryLabel(e.category)}</span></td><td>£${amount.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td><span class="tag">${expenseFrequencyLabel(e.frequency)}</span></td><td>£${monthlyEq.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${esc(e.payment||"—")}</td><td><strong>£${annual.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></td><td><button class="btn btn-ghost" style="padding:7px 10px" onclick="openEditExpenseForm('${esc(e.id)}')">Edit</button></td></tr>`;
+      return `<tr><td><strong>${esc(e.title)}</strong><br><span style="font-size:12px;color:var(--muted)">${esc(e.related||"")}</span></td><td>${expenseScope(e)==="Personal"?"👤 Personal":"🏠 Home"}</td><td>£${amount.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td><span class="tag">${expenseFrequencyLabel(e.frequency)}</span></td><td>£${monthlyEq.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${esc(e.payment||"—")}</td><td><button class="btn btn-ghost" style="padding:7px 10px" onclick="openEditExpenseForm('${esc(e.id)}')">Edit</button></td></tr>`;
    }).join("")}
-   </tbody></table>`:`<div class="empty"><h3>No recurring costs yet</h3><p>Add your mortgage, rent, insurance, broadband, council tax, subscriptions, servicing or other regular costs.</p></div>`}
+   </tbody></table>`:`<div class="empty"><h3>No recurring costs yet</h3><p>Add home or personal monthly/yearly costs.</p></div>`}
  </div></div>
 
- <div class="section"><h2>Annual breakdown</h2><div class="grid grid-3">
+ <div class="section"><h2>Annual home breakdown</h2><div class="grid grid-3">
    ${categories.map(c=>`<div class="card stat"><div><div class="stat-number">£${(b[c]||0).toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</div><p>${expenseCategoryLabel(c)}</p></div><div class="stat-icon">${c==="Home"?"🏠":c==="Vehicle"?"🚗":c==="Repairs"?"🔧":c==="Appliances"?"🧊":c==="Boiler"?"🔥":"📦"}</div></div>`).join("")}
  </div></div>
 
- <div class="section"><div class="page-head"><div><h2>All expenses</h2><p>One-off expenses and recurring costs.</p></div></div><div class="card">
- ${rows.length?`<table><thead><tr><th>Cost</th><th>Amount</th><th>Frequency</th><th>Category</th><th>Payment</th><th>Start / Date</th><th>Actions</th></tr></thead><tbody>${rows.map(e=>{
+ <div class="section"><div class="page-head"><div><h2>All expenses</h2><p>${homeRows.length} home expense${homeRows.length===1?"":"s"} · ${personalRows.length} personal expense${personalRows.length===1?"":"s"}</p></div></div><div class="card">
+ ${rows.length?`<table><thead><tr><th>Cost</th><th>Type</th><th>Amount</th><th>Frequency</th><th>Category</th><th>Payment</th><th>Date</th><th>Actions</th></tr></thead><tbody>${rows.map(e=>{
    const amount=Number(e.amount||0);
-   return `<tr><td><strong>${esc(e.title)}</strong>${e.related?`<br><span style="font-size:12px;color:var(--muted)">${esc(e.related)}</span>`:""}</td><td>£${amount.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${expenseFrequencyLabel(e.frequency)}</td><td>${expenseCategoryLabel(e.category)}</td><td>${esc(e.payment||"—")}</td><td>${formatDate(e.date)}</td><td><button class="btn btn-ghost" style="padding:7px 10px" onclick="openEditExpenseForm('${esc(e.id)}')">Edit</button></td></tr>`;
- }).join("")}</tbody></table>`:`<div class="empty"><div style="font-size:45px">💷</div><h3>No expenses recorded</h3><p>Add your first home cost.</p></div>`}
+   return `<tr><td><strong>${esc(e.title)}</strong>${e.related?`<br><span style="font-size:12px;color:var(--muted)">${esc(e.related)}</span>`:""}</td><td>${expenseScope(e)==="Personal"?"👤 Personal":"🏠 Home"}</td><td>£${amount.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${expenseFrequencyLabel(e.frequency)}</td><td>${expenseScope(e)==="Personal"?"👤 Personal":"🏠 "+expenseCategoryLabel(e.category).replace(/^🏠\s*/,"")}</td><td>${esc(e.payment||"—")}</td><td>${formatDate(e.date)}</td><td><button class="btn btn-ghost" style="padding:7px 10px" onclick="openEditExpenseForm('${esc(e.id)}')">Edit</button></td></tr>`;
+ }).join("")}</tbody></table>`:`<div class="empty"><div style="font-size:45px">💷</div><h3>No expenses recorded</h3><p>Add your first home or personal expense.</p></div>`}
  </div></div>
 
- <div class="section card"><h2>💡 HomeVault financial picture</h2><p>Once enough costs are recorded, HomeVault can show the regular monthly cost of running a home, annual ownership/rental costs and the biggest areas of spending.</p></div>
+ <div class="section card"><h2>💡 HomeVault financial picture</h2><p>HomeVault can now separate the cost of running your home from your personal spending, giving you a simple view of your <strong>home monthly cost</strong>, <strong>personal monthly cost</strong> and <strong>combined monthly cost</strong>.</p></div>
  `);
 }
 function openExpenseForm(){
  openModal("Add expense",`<form onsubmit="saveExpense(event)"><div class="form-grid">
-  <div class="field"><label>Expense</label><input name="title" placeholder="Council tax / Boiler service / Car insurance" required></div>
+  <div class="field"><label>Expense</label><input name="title" placeholder="Council tax / Groceries / Boiler service" required></div>
+  <div class="field"><label>Expense type</label><select name="scope" onchange="togglePersonalExpenseFields(this.value)"><option value="Home">🏠 Home expense</option><option value="Personal">👤 Personal expense</option></select></div>
   <div class="field"><label>Amount (£)</label><input type="number" step="0.01" min="0" name="amount" placeholder="95" required></div>
   <div class="field"><label>Frequency</label><select name="frequency" onchange="toggleExpenseDateLabel(this.value)"><option value="One-off">One-off</option><option value="Monthly">Monthly</option><option value="Yearly">Yearly</option></select></div>
   <div class="field"><label id="expenseDateLabel">Date</label><input type="date" name="date" value="${new Date().toISOString().slice(0,10)}" required></div>
-  <div class="field"><label>Category</label><select name="category"><option value="Home">Home</option><option value="Vehicle">Car</option><option value="Repairs">Repairs</option><option value="Appliances">Appliances</option><option value="Boiler">Boiler</option><option value="Other">Other</option></select></div>
+  <div class="field"><label>Category</label><select name="category"><option value="Home">Home</option><option value="Vehicle">Car</option><option value="Repairs">Repairs</option><option value="Appliances">Appliances</option><option value="Boiler">Boiler</option><option value="Other">Other</option><option value="Groceries">Groceries</option><option value="Transport">Transport</option><option value="Entertainment">Entertainment</option><option value="Shopping">Shopping</option><option value="Health">Health</option><option value="Subscriptions">Subscriptions</option><option value="Personal">Personal</option></select></div>
   <div class="field"><label>Payment method</label><select name="payment"><option>Direct Debit</option><option>Card</option><option>Bank transfer</option><option>Cash</option><option>Finance</option><option>Other</option></select></div>
   <div class="field"><label>Related record</label><input name="related" placeholder="BMW 3 Series / Boiler / Home"></div>
   <div class="field"><label>Next payment / renewal</label><input type="date" name="nextDate"></div>
   <div class="field full"><label>Notes</label><textarea name="notes" placeholder="Optional details"></textarea></div>
   <div class="field full"><label>Receipt</label><input type="file" name="receipt" accept=".pdf,image/*"></div>
  </div>
- <div class="notice" style="margin-top:15px">For recurring costs, enter the amount paid each month or year. HomeVault will calculate the monthly equivalent and estimated annual cost automatically.</div>
+ <div id="personalExpenseHint" class="notice" style="margin-top:15px">Choose Home or Personal. Personal expenses can include groceries, transport, subscriptions, shopping, health and other individual spending. For recurring costs, enter the amount paid each month or year and HomeVault will calculate the monthly equivalent and estimated annual cost automatically.</div>
  <div class="actions"><button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary">Save expense</button></div></form>`);
 }
 function toggleExpenseDateLabel(value){
@@ -534,12 +570,22 @@ function toggleExpenseDateLabel(value){
  if(label) label.textContent=value==="One-off"?"Date":value==="Monthly"?"First payment date":"Renewal / payment date";
 }
 
+function togglePersonalExpenseFields(value){
+ const related=document.querySelector('input[name="related"]');
+ const category=document.querySelector('select[name="category"]');
+ if(value==="Personal"){
+   if(related) related.placeholder="Optional — e.g. personal account, gym, subscription";
+   if(category && ["Home","Vehicle","Repairs","Appliances","Boiler"].includes(category.value))category.value="Personal";
+ }else{
+   if(related) related.placeholder="BMW 3 Series / Boiler / Home";
+ }
+}
 function saveExpense(e){
  e.preventDefault();
  const f=new FormData(e.target),file=e.target.receipt.files[0];
  state.expenses.unshift({
    id:uid(),title:f.get("title"),amount:Number(f.get("amount")||0),date:f.get("date"),
-   frequency:f.get("frequency"),category:f.get("category"),related:f.get("related"),
+   scope:f.get("scope")||"Home",frequency:f.get("frequency"),category:f.get("category"),related:f.get("related"),
    payment:f.get("payment"),nextDate:f.get("nextDate"),notes:f.get("notes"),receipt:file?.name||""
  });
  save();addActivity("Added expense");closeModal();expensesPage();toast("Expense added");

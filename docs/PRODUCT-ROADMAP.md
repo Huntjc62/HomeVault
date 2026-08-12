@@ -151,3 +151,16 @@ Potential future records:
 - [ ] Payment due notifications
 - [ ] Recurring expense editing
 - [ ] Cancelled recurring costs
+
+## Personal expense tracker
+
+- [x] Home / Personal expense type
+- [x] Personal categories
+- [x] Home monthly cost
+- [x] Personal monthly cost
+- [x] Combined monthly cost
+- [ ] Monthly budget
+- [ ] Personal category budgets
+- [ ] Spending alerts
+- [ ] Bank transaction import
+- [ ] Open banking integration

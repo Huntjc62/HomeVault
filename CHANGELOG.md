@@ -80,3 +80,13 @@
 - Added Delete expense functionality with confirmation.
 - Added edit access to recurring-cost records.
 - Expense totals and breakdowns recalculate immediately after changes.
+
+## Personal expense tracker update
+
+- Added Home expense / Personal expense selection.
+- Added personal expense categories including groceries, transport, entertainment, shopping, health and subscriptions.
+- Added Home monthly cost calculation.
+- Added Personal monthly cost calculation.
+- Added Combined monthly cost calculation.
+- Added a visual monthly home vs personal breakdown.
+- Updated expense forms and history to show expense type.
